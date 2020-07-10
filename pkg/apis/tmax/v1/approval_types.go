@@ -34,7 +34,7 @@ type ApprovalStatus struct {
 	// Add custom validation using kubebuilder tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html
 
 	Result       Result      `json:"result"`
-	DecisionTime metav1.Time `json:"decisionTime"`
+	DecisionTime metav1.Time `json:"decisionTime,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
