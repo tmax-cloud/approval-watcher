@@ -27,3 +27,13 @@ func Users(cmPath string) (map[string]string, error) {
 
 	return users, nil
 }
+
+func GenerateUserLabel(list []string) map[string]string {
+	result := map[string]string{}
+
+	for _, user := range list {
+		result[user] = ""
+	}
+
+	return result
+}
