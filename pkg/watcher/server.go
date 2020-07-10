@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	Method      string = "POST"
+	Method      string = "PUT"
 	DefaultPort int    = 10999
 	DefaultPath string = "/approve/{namespace}/{approvalName}"
 )
