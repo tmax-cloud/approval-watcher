@@ -1,0 +1,11 @@
+apiVersion: tekton.dev/v1beta1
+kind: TaskRun
+metadata:
+  name: example-with-approval-run
+  namespace: default
+spec:
+  taskRef:
+    name: example-with-approval
+  params:
+  - name: CM_APPROVER_DEV
+    value: approver-dev
