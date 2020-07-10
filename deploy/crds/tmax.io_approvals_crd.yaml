@@ -30,9 +30,28 @@ spec:
           type: object
         spec:
           description: ApprovalSpec defines the desired state of Approval
+          properties:
+            podName:
+              type: string
+            users:
+              items:
+                type: string
+              type: array
+          required:
+          - podName
+          - users
           type: object
         status:
           description: ApprovalStatus defines the observed state of Approval
+          properties:
+            decisionTime:
+              format: date-time
+              type: string
+            result:
+              type: string
+          required:
+          - decisionTime
+          - result
           type: object
       type: object
   version: v1

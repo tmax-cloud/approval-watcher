@@ -4,6 +4,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+type Result string
+
+const (
+	ResultWaiting  Result = "Waiting"
+	ResultApproved Result = "Approved"
+	ResultRejected Result = "Rejected"
+	ResultFailed   Result = "Failed"
+)
+
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
@@ -12,6 +21,10 @@ type ApprovalSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html
+
+	PodName string `json:"podName"`
+
+	Users []string `json:"users"`
 }
 
 // ApprovalStatus defines the observed state of Approval
@@ -19,6 +32,9 @@ type ApprovalStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html
+
+	Result       Result      `json:"result"`
+	DecisionTime metav1.Time `json:"decisionTime"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
