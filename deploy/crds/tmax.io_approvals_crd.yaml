@@ -50,7 +50,6 @@ spec:
             result:
               type: string
           required:
-          - decisionTime
           - result
           type: object
       type: object

@@ -1,0 +1,19 @@
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: example-with-approval
+  namespace: default
+spec:
+  params:
+  - name: CM_APPROVER_DEV
+  steps:
+  - name: approval-1
+    image: 192.168.6.110:5000/l2c-util:v1
+    imagePullPolicy: Always
+    volumeMounts:
+    - name: approver-list-dev
+      mountPath: /tmp/config
+  volumes:
+  - name: approver-list-dev
+    configMap:
+      name: $(params.CM_APPROVER_DEV)

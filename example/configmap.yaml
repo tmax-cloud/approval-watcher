@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: approver-dev
+  namespace: default
+data:
+  users: |
+    shkim-tmax.co.kr=sunghyun_kim3@tmax.co.kr
