@@ -10,7 +10,6 @@ spec:
   - name: approval-1
     image: 192.168.6.110:5000/l2c-util:v1
     imagePullPolicy: Always
-    script: |
     volumeMounts:
     - name: approver-list-dev
       mountPath: /tmp/config
