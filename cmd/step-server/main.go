@@ -47,18 +47,7 @@ func validateToken(tokenString string) (int, error) {
 		log.Error(err, fmt.Sprintf("skip an error, token: %s", token))
 	}
 
-	//if err != nil {
-	//	if err == jwt.ErrSignatureInvalid {
-	//		return http.StatusUnauthorized, err
-	//	}
-	//	return http.StatusBadRequest, err
-	//}
-	//
-	//if !token.Valid {
-	//	return http.StatusUnauthorized, errors.New("invalid jwt token")
-	//}
-
-	if _, ok := users[claim.TokenId]; !ok {
+	if _, ok := users[claim.Id]; !ok {
 		return http.StatusBadRequest, errors.New("not an approver in the list")
 	}
 
