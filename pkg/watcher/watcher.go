@@ -9,8 +9,9 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
-	"log"
+	"os"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -37,36 +38,39 @@ const (
 )
 
 var k8sClient client.Client
+var log = logf.Log.WithName("approve-watcher")
 
 func WatchPods(_ chan bool) {
 	cfg, err := config.GetConfig()
 	clientSet, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
-		log.Fatal(err)
+		log.Error(err, "cannot get k8s config")
+		os.Exit(1)
 	}
 
 	w, err := clientSet.CoreV1().Pods("").Watch(metav1.ListOptions{LabelSelector: LabelTektonTaskRun})
 	if err != nil {
-		log.Fatal(err)
+		log.Error(err, "cannot watch pods")
+		os.Exit(1)
 	}
-	log.Printf("Started to watch pods with label %s ...\n", LabelTektonTaskRun)
+	log.Info(fmt.Sprintf("Started to watch pods with label %s ...", LabelTektonTaskRun))
 
 	// Generate k8sClient for creating/updating approval cr
 	s := scheme.Scheme
 	if err := apis.AddToScheme(s); err != nil {
-		log.Println(err)
-		return
+		log.Error(err, "cannot add Approval scheme")
+		os.Exit(1)
 	}
 	k8sClient, err = internal.Client(client.Options{Scheme: s})
 	if err != nil {
-		log.Println("cannot get k8s client")
-		return
+		log.Error(err, "cannot get k8s client")
+		os.Exit(1)
 	}
 
 	for event := range w.ResultChan() {
 		pod, ok := event.Object.(*corev1.Pod)
 		if !ok {
-			log.Println("object is not a Pod type")
+			log.Info("object is not a Pod type")
 		}
 		if !containsApprovalStep(pod) {
 			continue
@@ -78,6 +82,7 @@ func WatchPods(_ chan bool) {
 			// Should we handle pod deletion event?
 		}
 	}
+	log.Error(fmt.Errorf("watcher dead"), "watcher is dead")
 }
 
 func handlePodEvent(pod *corev1.Pod) {
@@ -109,16 +114,16 @@ func handlePodEvent(pod *corev1.Pod) {
 
 // Executed when approval step is started
 func handleApprovalStepStarted(pod *corev1.Pod, cont *corev1.Container) {
-	log.Println("Approval step is started...")
+	log.Info("Approval step is started...")
 	contStatus := getContainerStatus(pod, cont)
 	if contStatus.State.Running == nil {
-		log.Printf("approval step is in wrong state (expecting %s)\n", string(PodStateRunning))
+		log.Info(fmt.Sprintf("approval step is in wrong state (expecting %s)", string(PodStateRunning)))
 		return
 	}
 
 	name, err := generateApprovalName(pod, cont)
 	if err != nil {
-		log.Println(err)
+		log.Error(err, "cannot generate approval name")
 		return
 	}
 	_, err = internal.GetApproval(k8sClient, name)
@@ -126,18 +131,18 @@ func handleApprovalStepStarted(pod *corev1.Pod, cont *corev1.Container) {
 		// Create approval if it does not exist
 		cmName, err := getConfigMapName(pod, cont)
 		if err != nil {
-			log.Println(err)
+			log.Error(err, "cannot get configMap name")
 			return
 		}
 		cm, err := internal.GetConfigMap(k8sClient, cmName)
 		if err != nil {
-			log.Println(err)
+			log.Error(err, "cannot get configMap")
 			return
 		}
 		var users []string
 		usersString, exist := cm.Data[ConfigMapKey]
 		if !exist {
-			log.Printf("the ConfigMap should contain key %s\n", ConfigMapKey)
+			log.Error(fmt.Errorf("the ConfigMap should contain key %s", ConfigMapKey), "invalid configMap")
 			return
 		}
 		//TODO - refactor USERS func
@@ -147,25 +152,24 @@ func handleApprovalStepStarted(pod *corev1.Pod, cont *corev1.Container) {
 			users = append(users, user[0])
 		}
 		if err := scanner.Err(); err != nil {
-			log.Println(err)
-			log.Printf("cannot process users list %s\n", usersString)
+			log.Error(err, fmt.Sprintf("cannot process users list %s", usersString))
 			return
 		}
 		if err := internal.CreateApproval(k8sClient, name, pod.Name, users); err != nil {
-			log.Println(err)
+			log.Error(err, "cannot create approval")
 			return
 		}
 	} else if err != nil {
-		log.Println(err)
+		log.Error(err, "error while getting approval")
 	}
 }
 
 // Executed when approval step is ended
 func handleApprovalStepFinished(pod *corev1.Pod, cont *corev1.Container) {
-	log.Println("Approval step is finished...")
+	log.Info("Approval step is finished...")
 	contStatus := getContainerStatus(pod, cont)
 	if contStatus.State.Terminated == nil {
-		log.Printf("approval step is in wrong state (expecting %s)\n", string(PodStateTerminated))
+		log.Error(fmt.Errorf("approval step is in wrong state (expecting %s)", string(PodStateTerminated)), "cannot get container status")
 		return
 	}
 
@@ -179,11 +183,11 @@ func handleApprovalStepFinished(pod *corev1.Pod, cont *corev1.Container) {
 	}
 	name, err := generateApprovalName(pod, cont)
 	if err != nil {
-		log.Println(err)
+		log.Error(err, "cannot generate approval name")
 		return
 	}
 	if err := internal.UpdateApproval(k8sClient, name, result); err != nil {
-		log.Println(err)
+		log.Error(err, "cannot update approval")
 		return
 	}
 }

@@ -3,12 +3,12 @@ package internal
 import (
 	"context"
 	"fmt"
-	corev1 "k8s.io/api/core/v1"
-	"log"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	tmaxv1 "github.com/tmax-cloud/approval-watcher/pkg/apis/tmax/v1"
 )
@@ -23,7 +23,7 @@ func GetApproval(c client.Client, name types.NamespacedName) (*tmaxv1.Approval, 
 }
 
 func CreateApproval(c client.Client, name types.NamespacedName, podName string, userList []string) error {
-	log.Println("Creating Approval...")
+	logf.Log.Info("Creating Approval...")
 	approval := &tmaxv1.Approval{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name.Name,
@@ -46,7 +46,7 @@ func CreateApproval(c client.Client, name types.NamespacedName, podName string, 
 }
 
 func UpdateApproval(c client.Client, name types.NamespacedName, result tmaxv1.Result) error {
-	log.Println("Updating Approval...")
+	logf.Log.Info("Updating Approval...")
 	approval, err := GetApproval(c, name)
 	if err != nil {
 		return err
