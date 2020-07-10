@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: approval-proxy-server
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: approval-proxy-server
+  template:
+    metadata:
+      labels:
+        app: approval-proxy-server
+    spec:
+      serviceAccount: approval-watcher
+      containers:
+        - name: proxy-server
+          image: tmaxcloudck/approval-watcher:0.0.1
+          imagePullPolicy: Always
