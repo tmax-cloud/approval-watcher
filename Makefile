@@ -4,7 +4,9 @@ REGISTRY      ?= tmaxcloudck
 VERSION       ?= 0.0.1
 
 PACKAGE_NAME  = github.com/tmax-cloud/approval-watcher
-WATCHER_IMG   = $(REGISTRY)/$(PACKAGE_NAME):$(VERSION)
+
+WATCHER_NAME  = approval-watcher
+WATCHER_IMG   = $(REGISTRY)/$(WATCHER_NAME):$(VERSION)
 
 STEP_SERVER_NAME  = approval-step-server
 STEP_SERVER_IMG   = $(REGISTRY)/$(STEP_SERVER_NAME):$(VERSION)
