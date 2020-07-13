@@ -22,7 +22,7 @@ var users map[string]string
 const (
 	ConfigMapPath string = "/tmp/config/users"
 	JwtKey        string = "Tmax-ProAuth"
-	Port          int    = 10203
+	Port                 = apis.StepServerPort
 
 	ApprovedMessage string = "Approval accepted. Exit the server."
 	RejectedMessage string = "Reject accepted. Exit the server."

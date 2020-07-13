@@ -105,7 +105,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	addr := fmt.Sprint("http://", podIP, ":", 10203, "/")
+	addr := fmt.Sprint("http://", podIP, ":", apis.StepServerPort, "/")
 	sendReq, err := http.NewRequest(http.MethodPut, addr, bytes.NewBuffer(jsonBody))
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, fmt.Sprintf("cannot create decision request, err: %s", err.Error()))
