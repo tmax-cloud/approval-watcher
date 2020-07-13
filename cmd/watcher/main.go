@@ -16,8 +16,12 @@ func main() {
 	logf.SetLogger(zap.Logger())
 	stopChan := make(chan bool)
 
-	// Launch Pod watcher
-	go watcher.WatchPods(stopChan)
+	// Launch Pod watcher - Restart when watcher dies
+	go func() {
+		for {
+			watcher.WatchPods(stopChan)
+		}
+	}()
 
 	// Launch web server
 	var port int
