@@ -5,10 +5,15 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/operator-framework/operator-sdk/pkg/log/zap"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+
+	"github.com/tmax-cloud/approval-watcher/pkg/server"
 	"github.com/tmax-cloud/approval-watcher/pkg/watcher"
 )
 
 func main() {
+	logf.SetLogger(zap.Logger())
 	stopChan := make(chan bool)
 
 	// Launch Pod watcher
@@ -18,14 +23,14 @@ func main() {
 	var port int
 	portStr := os.Getenv("APPROVE_PORT")
 	if portStr == "" {
-		port = watcher.DefaultPort
+		port = server.DefaultPort
 	} else {
 		var err error
 		if port, err = strconv.Atoi(portStr); err != nil {
 			log.Fatal(err)
 		}
 	}
-	go watcher.LaunchServer(port, watcher.DefaultPath, stopChan)
+	go server.LaunchServer(port, server.DefaultPath, stopChan)
 
 	success := <-stopChan
 	if success {

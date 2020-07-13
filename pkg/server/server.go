@@ -1,4 +1,4 @@
-package watcher
+package server
 
 import (
 	"bytes"
@@ -6,8 +6,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/tmax-cloud/approval-watcher/pkg/apis"
-	"log"
+	"github.com/tmax-cloud/approval-watcher/pkg/watcher"
 	"net/http"
+	"os"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/gorilla/mux"
 	corev1 "k8s.io/api/core/v1"
@@ -23,22 +25,25 @@ const (
 	DefaultPath string = "/approve/{namespace}/{approvalName}"
 )
 
+var log = logf.Log.WithName("approve-server")
+
 func LaunchServer(port int, path string, _ chan bool) {
 	router := mux.NewRouter()
 
-	log.Printf("Handler set to %s (%s)\n", path, Method)
+	log.Info(fmt.Sprintf("Handler set to %s (%s)", path, Method))
 	router.HandleFunc(path, handler).Methods(Method)
 
 	addr := fmt.Sprintf(":%d", port)
-	log.Printf("Server is running on %s\n", addr)
+	log.Info(fmt.Sprintf("Server is running on %s", addr))
 	if err := http.ListenAndServe(addr, router); err != nil {
-		log.Fatal(err)
+		log.Error(err, "cannot listen")
+		os.Exit(1)
 	}
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
-	req := &Request{}
-	resp := &Response{}
+	req := &watcher.Request{}
+	resp := &watcher.Response{}
 
 	encoder := json.NewEncoder(w)
 	decoder := json.NewDecoder(r.Body)
@@ -63,12 +68,16 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 	// Get decision
 	if err := decoder.Decode(req); err != nil {
-		respondError(w, http.StatusBadRequest, "body should contain decision field")
+		respondError(w, http.StatusBadRequest, fmt.Sprintf("body should contain decision field, err: %s", err.Error()))
 		return
 	}
 
 	// Get k8s client
 	c, err := internal.Client(client.Options{})
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
 
 	// Get corresponding Approval object
 	approval, err := internal.GetApproval(c, types.NamespacedName{Name: approvalName, Namespace: ns})
@@ -81,7 +90,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	podName := approval.Spec.PodName
 	pod := &corev1.Pod{}
 	if err := c.Get(context.TODO(), types.NamespacedName{Name: podName, Namespace: ns}, pod); err != nil {
-		respondError(w, http.StatusInternalServerError, fmt.Sprintf("no Pod %s/%s is found", ns, podName))
+		respondError(w, http.StatusInternalServerError, fmt.Sprintf("no Pod %s/%s is found, err: %s", ns, podName, err.Error()))
 		return
 	}
 
@@ -92,37 +101,49 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	sendClient := &http.Client{}
 	jsonBody, err := json.Marshal(sendMsg)
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, fmt.Sprintf("cannot marshal decisionmessage"))
+		respondError(w, http.StatusInternalServerError, fmt.Sprintf("cannot marshal decisionmessage, err: %s", err.Error()))
 		return
 	}
-	sendReq, err := http.NewRequest(http.MethodPut, fmt.Sprint("http://", podIP, ":", 10203, "/"), bytes.NewBuffer(jsonBody))
+
+	addr := fmt.Sprint("http://", podIP, ":", 10203, "/")
+	sendReq, err := http.NewRequest(http.MethodPut, addr, bytes.NewBuffer(jsonBody))
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, fmt.Sprintf("cannot create decision request"))
+		respondError(w, http.StatusInternalServerError, fmt.Sprintf("cannot create decision request, err: %s", err.Error()))
 		return
 	}
-	_, err = sendClient.Do(sendReq)
+	sendReq.Header.Set("Authorization", auth)
+
+	log.Info(fmt.Sprintf("Sending request to %s", addr))
+
+	sendResp, err := sendClient.Do(sendReq)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	defer sendResp.Body.Close()
+	if sendResp.StatusCode != http.StatusOK {
+		respondError(w, http.StatusInternalServerError, fmt.Sprintf("Response status code: %d", sendResp.StatusCode))
 		return
 	}
 
 	// Return success
 	resp.Result = true
 	if err := encoder.Encode(resp); err != nil {
-		log.Println(err)
+		log.Error(err, "cannot return response")
 	}
 }
 
 func respondError(w http.ResponseWriter, statusCode int, message string) {
-	log.Println(message)
+	log.Error(fmt.Errorf(message), "error occurred")
 
-	resp := &Response{
+	resp := &watcher.Response{
 		Result:  false,
 		Message: message,
 	}
 
 	w.WriteHeader(statusCode)
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		log.Println(err)
+		log.Error(err, "cannot return response")
 	}
 }
