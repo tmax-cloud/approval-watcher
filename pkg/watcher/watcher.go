@@ -82,7 +82,6 @@ func WatchPods(_ chan bool) {
 			// Should we handle pod deletion event?
 		}
 	}
-	log.Error(fmt.Errorf("watcher dead"), "watcher is dead")
 }
 
 func handlePodEvent(pod *corev1.Pod) {
@@ -104,10 +103,10 @@ func handlePodEvent(pod *corev1.Pod) {
 		} else if state == PodStateTerminated {
 			// Terminated state - check if it is finished now!
 			// If it is the last step, or next step is running, Approval step is terminated
-			if i == len(pod.Spec.Containers)-1 || getStepState(pod, &pod.Spec.Containers[i+1]) == PodStateRunning || getStepState(pod, &pod.Spec.Containers[i+1]) == PodStateWaiting {
-				handleApprovalStepFinished(pod, &cont)
-				return
-			}
+			// Bug?? Current/Next step is in Terminated state... right after the approval step ends
+			//       just update Approval whenever the current step is in terminated status
+			handleApprovalStepFinished(pod, &cont)
+			return
 		}
 	}
 }
