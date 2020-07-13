@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
+	"github.com/operator-framework/operator-sdk/pkg/log/zap"
 	"github.com/tmax-cloud/approval-watcher/internal"
 	"github.com/tmax-cloud/approval-watcher/pkg/apis"
 	"net/http"
@@ -67,8 +68,10 @@ func messageHandler(w http.ResponseWriter, r *http.Request) (int, error) {
 
 	var msg string
 	if m.Decision == apis.DecisionApproved {
+		log.Info("approved message accepted")
 		msg = ApprovedMessage
 	} else if m.Decision == apis.DecisionRejected {
+		log.Info("rejected message accepted")
 		msg = RejectedMessage
 		exitCode = 1
 	} else {
@@ -93,6 +96,8 @@ func messageHandler(w http.ResponseWriter, r *http.Request) (int, error) {
 }
 
 func decisionHandler(w http.ResponseWriter, r *http.Request) {
+	log.Info("request comes in")
+
 	tokenString := extractToken(r)
 	if tokenString == "" {
 		log.Info("no access token in the request header")
@@ -102,25 +107,28 @@ func decisionHandler(w http.ResponseWriter, r *http.Request) {
 
 	responseCode, err := validateToken(tokenString)
 	if err != nil {
-		log.Error(err, "error occurs: ")
+		log.Error(err, "error occurs while validating token")
 		w.WriteHeader(responseCode)
 		return
 	}
 
 	exitCode, err := messageHandler(w, r)
 	if err != nil {
-		log.Error(err, "error occurs: ")
+		log.Error(err, "error occurs while handling received message")
 		return
 	}
 
 	// exit the server
 	go func() {
+		log.Info(fmt.Sprintf("server will be shutdown with exitcode %d", exitCode))
 		time.Sleep(5 * time.Second)
 		os.Exit(exitCode)
 	}()
 }
 
 func main() {
+	logf.SetLogger(zap.Logger())
+
 	var err error
 	users, err = internal.Users(ConfigMapPath)
 	if err != nil {
@@ -128,6 +136,7 @@ func main() {
 		panic(err)
 	}
 
+	log.Info("initializing server....")
 	router := mux.NewRouter()
 	router.HandleFunc("/", decisionHandler).Methods("PUT")
 
