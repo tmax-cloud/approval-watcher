@@ -115,6 +115,7 @@ func decisionHandler(w http.ResponseWriter, r *http.Request) {
 	exitCode, err := messageHandler(w, r)
 	if err != nil {
 		log.Error(err, "error occurs while handling received message")
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
