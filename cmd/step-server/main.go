@@ -22,7 +22,7 @@ var users map[string]string
 const (
 	ConfigMapPath string = "/tmp/config/users"
 	JwtKey        string = "Tmax-ProAuth"
-	Port          int    = 10203
+	Port                 = apis.StepServerPort
 
 	ApprovedMessage string = "Approval accepted. Exit the server."
 	RejectedMessage string = "Reject accepted. Exit the server."
@@ -115,6 +115,7 @@ func decisionHandler(w http.ResponseWriter, r *http.Request) {
 	exitCode, err := messageHandler(w, r)
 	if err != nil {
 		log.Error(err, "error occurs while handling received message")
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
