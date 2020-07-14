@@ -9,6 +9,7 @@ import (
 	"github.com/operator-framework/operator-sdk/pkg/log/zap"
 	"github.com/tmax-cloud/approval-watcher/internal"
 	"github.com/tmax-cloud/approval-watcher/pkg/apis"
+	"github.com/tmax-cloud/approval-watcher/pkg/watcher"
 	"net/http"
 	"os"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -38,7 +39,7 @@ func extractToken(r *http.Request) string {
 	return ""
 }
 
-func validateToken(tokenString string) (int, error) {
+func validateToken(tokenString string) error {
 	claim := &apis.JwtClaim{}
 	token, err := jwt.ParseWithClaims(tokenString, claim, func(token *jwt.Token) (interface{}, error) {
 		return JwtKey, nil
@@ -49,22 +50,14 @@ func validateToken(tokenString string) (int, error) {
 	}
 
 	if _, ok := users[claim.Id]; !ok {
-		return http.StatusBadRequest, errors.New("not an approver in the list")
+		return errors.New("not an approver in the list")
 	}
 
-	return 200, nil
+	return nil
 }
 
-func messageHandler(w http.ResponseWriter, r *http.Request) (int, error) {
-	var m apis.DecisionMessage
-	err := json.NewDecoder(r.Body).Decode(&m)
-	if err != nil {
-		return 0, err
-	}
-
+func messageHandler(m apis.DecisionMessage) (int, watcher.Response, error) {
 	exitCode := 0
-	enc := json.NewEncoder(w)
-	w.Header().Set("Content-Type", "application/json")
 
 	var msg string
 	if m.Decision == apis.DecisionApproved {
@@ -76,23 +69,27 @@ func messageHandler(w http.ResponseWriter, r *http.Request) (int, error) {
 		exitCode = 1
 	} else {
 		log.Info("Message: " + UnknownMessage)
-		resMsg := apis.DecisionMessage{Decision: apis.DecisionUnknown, Message: UnknownMessage + string(m.Decision)}
-		err = enc.Encode(resMsg)
-		if err != nil {
-			return 0, err
-		}
-		return 0, errors.New("unknown Message")
+		resMsg := watcher.Response{Result: false, Message: UnknownMessage + string(m.Decision)}
+		return 0, resMsg, errors.New("unknown Message")
 	}
 
 	// approved or rejected
 	log.Info("Message: " + msg)
-	resMsg := apis.DecisionMessage{Decision: m.Decision, Message: msg}
-	err = enc.Encode(resMsg)
-	if err != nil {
-		return 0, err
-	}
+	resMsg := watcher.Response{Result: true, Message: msg}
 
-	return exitCode, nil
+	return exitCode, resMsg, nil
+}
+
+func responseMessage(w http.ResponseWriter, respCode int, respMsg watcher.Response) {
+	enc := json.NewEncoder(w)
+	w.Header().Set("Content-Type", "application/json")
+
+	w.WriteHeader(respCode)
+	err := enc.Encode(respMsg)
+
+	if err != nil {
+		log.Error(err, "error occurs while encoding response message")
+	}
 }
 
 func decisionHandler(w http.ResponseWriter, r *http.Request) {
@@ -101,23 +98,46 @@ func decisionHandler(w http.ResponseWriter, r *http.Request) {
 	tokenString := extractToken(r)
 	if tokenString == "" {
 		log.Info("no access token in the request header")
-		w.WriteHeader(http.StatusBadRequest)
+		responseMessage(w, http.StatusBadRequest, watcher.Response{
+			Result:  false,
+			Message: "invalid token",
+		})
 		return
 	}
 
-	responseCode, err := validateToken(tokenString)
+	err := validateToken(tokenString)
 	if err != nil {
 		log.Error(err, "error occurs while validating token")
-		w.WriteHeader(responseCode)
+		responseMessage(w, http.StatusBadRequest, watcher.Response{
+			Result:  false,
+			Message: "invalid token",
+		})
 		return
 	}
 
-	exitCode, err := messageHandler(w, r)
+	// get message
+	var m apis.DecisionMessage
+	err = json.NewDecoder(r.Body).Decode(&m)
 	if err != nil {
-		log.Error(err, "error occurs while handling received message")
-		w.WriteHeader(http.StatusInternalServerError)
+		log.Error(err, "error occurs while decoding body")
+		responseMessage(w, http.StatusInternalServerError, watcher.Response{
+			Result:  false,
+			Message: "internal server error",
+		})
 		return
 	}
+
+	exitCode, respMsg, err := messageHandler(m)
+	// if get unknown messages
+	if err != nil {
+		log.Error(err, "received unknown message")
+		responseMessage(w, http.StatusBadRequest, respMsg)
+		return
+	}
+
+	// succeed to get approved or rejected message
+	log.Info(fmt.Sprintf("succeed to get message: %s", m.Decision))
+	responseMessage(w, http.StatusOK, respMsg)
 
 	// exit the server
 	go func() {
