@@ -5,18 +5,19 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/tmax-cloud/approval-watcher/pkg/apis"
-	"github.com/tmax-cloud/approval-watcher/pkg/watcher"
 	"net/http"
 	"os"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/gorilla/mux"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/tmax-cloud/approval-watcher/internal"
+	"github.com/tmax-cloud/approval-watcher/pkg/apis"
+	tmaxv1 "github.com/tmax-cloud/approval-watcher/pkg/apis/tmax/v1"
+	"github.com/tmax-cloud/approval-watcher/pkg/watcher"
 )
 
 const (
@@ -83,6 +84,12 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	approval, err := internal.GetApproval(c, types.NamespacedName{Name: approvalName, Namespace: ns})
 	if err != nil {
 		respondError(w, http.StatusBadRequest, fmt.Sprintf("no Approval %s/%s is found", ns, approvalName))
+		return
+	}
+
+	// If Approval is already in approved/rejected status, respond with error
+	if approval.Status.Result == tmaxv1.ResultApproved || approval.Status.Result == tmaxv1.ResultRejected {
+		respondError(w, http.StatusBadRequest, fmt.Sprintf("approval %s/%s is already in %s status", ns, approvalName, approval.Status.Result))
 		return
 	}
 
