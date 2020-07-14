@@ -106,7 +106,6 @@ func handlePodEvent(pod *corev1.Pod) {
 			// Bug?? Current/Next step is in Terminated state... right after the approval step ends
 			//       just update Approval whenever the current step is in terminated status
 			handleApprovalStepFinished(pod, &cont)
-			return
 		}
 	}
 }
