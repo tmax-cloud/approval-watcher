@@ -1,0 +1,256 @@
+openapi: 3.0.0
+info:
+  description: |
+    승인과 관련된 APIs
+  version: "0.0.1"
+  title: Approval API
+  contact:
+    email: jaewon_kim@tmax.co.kr
+servers:
+# Added by API Auto Mocking Plugin
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/ck2-2/Approval-api/1.0.0
+  - url: 192.168.6.171:32765
+    description: server for getting approval list
+  - url: 192.168.6.171:10999
+    description: server for approve(or reject) the step
+tags:
+  - name: approval
+    description: Access to Approvals
+paths:
+  /approve/{namespace}/{approval-name}:
+    put:
+      tags:
+        - approval
+      summary: Accept(or reject) the step
+      parameters:
+      - $ref: '#/components/parameters/tokenParam'
+      - in: "path"
+        name: namespace
+        description: namespace of approval CR
+        required: true
+        schema:
+          type: "string"
+      - in: "path"
+        name: approval-name
+        description: approval name that should be changed
+        required: true
+        schema:
+          type: "string"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Decision'
+            example: {
+              decision: Approved
+            }
+      responses:
+        '200':
+          description: Decision Accepted
+          content:
+            application/json:
+              schema:
+                example:
+                  result: true
+                  message: ""
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                example:
+                  result: false,
+                  message: "url should be in form of approve/{namespace}/{approval-name}"
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                example:
+                  result: false,
+                  message: "authorization header should be given"
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                example:
+                  result: false,
+                  message: "error message"
+                
+  /api/kubernetes/apis/tmax.io/v1/namespaces/{namespace}/approvals:
+    get:
+      tags:
+      - approval
+      summary: Accept(or reject) the step
+      parameters:
+      - $ref: '#/components/parameters/tokenParam'
+      - in: "path"
+        name: namespace
+        description: namespace of approval CR
+        required: true
+        schema:
+          type: "string"
+      - in: "query"
+        name: labelSelector
+        description: filter by user id
+        required: false
+        schema:
+          type: "string"
+      responses:
+        '200':
+          description: Return approval list
+          content:
+            application/json:
+              schema:
+                example: {
+                  "apiVersion":"tmax.io/v1",
+                   "items":[
+                      {
+                        "apiVersion":"tmax.io/v1",
+                        "kind":"Approval",
+                        "metadata":{
+                          "labels": {
+                            "jaewon-tmax.co.kr":""
+                          },
+                          "name": "sample-task-run-pod-abc-1",
+                          "namespace":"default",
+                         },
+                         "spec":{
+                            "podName": 'third-task-run-pod-bsntl',
+                            "users":[
+                              "jaewon-tmax.co.kr"
+                            ]
+                         }
+                      }
+                   ],
+                   "kind":"ApprovalList",
+                   "metadata":{
+                   }
+                }
+        '401':
+          description: Unauthorized
+          
+  /api/kubernetes/apis/tmax.io/v1/namespaces/{namespace}/approvals/{approval-name}:
+    get:
+      tags:
+      - approval
+      summary: Accept(or reject) the step
+      parameters:
+      - $ref: '#/components/parameters/tokenParam'
+      - in: "path"
+        name: namespace
+        description: namespace of approval CR
+        required: true
+        schema:
+          type: "string"
+      - in: "path"
+        name: approval-name
+        description: name of approval you want to find
+        required: true
+        schema:
+          type: "string"
+      responses:
+        '200':
+          description: Return approval list
+          content:
+            application/json:
+              schema:
+                example: {
+                 "apiVersion":"tmax.io/v1",
+                 "kind":"Approval",
+                 "metadata":{
+                    "labels":{
+                       "admin-tmax.co.kr":""
+                    },
+                    "name":"third-task-run-pod-rts-1",
+                    "namespace":"default",
+                 },
+                 "spec":{
+                    "podName":"third-task-run-pod-rtsml",
+                    "users":[
+                       "admin-tmax.co.kr"
+                    ]
+                 }
+              }
+components:
+  parameters: # common parameters
+    tokenParam:
+      in: "header"
+      name: "Authorization"
+      schema:
+        type: "string"
+        default: "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ0b2tlbklkIjoiYWU5ZTIzNTAtYzE2Ni00NDJlLTgwM2ItYzA5ZTI3YmNlMTU5IiwiaXNzIjoiVG1heC1Qcm9BdXRoIiwiaWQiOiJhZG1pbi10bWF4LmNvLmtyIiwiZXhwIjoxNTk0NzM5OTYyfQ.LSzWhjEvx-hUgiISAyRBur3fLYK-qIiiJvt-2KRX7zI"
+      required: true
+      description: "Master Token"
+  schemas:
+    Decision:
+      type: object
+      description: User's decision
+      properties:
+        decision:
+          type: string
+          enum: [Approved,Rejected]
+    Response:
+      type: object
+      description: Response from approval watcher server
+      properties:
+        result:
+          type: boolean
+        message:
+          type: string
+    Approval:
+      type: object
+      description: Approval
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: ApprovalSpec defines the desired state of Approval
+          properties:
+            podName:
+              type: string
+            users:
+              items:
+                type: string
+              type: array
+          required:
+          - podName
+          - users
+          type: object
+        status:
+          description: ApprovalStatus defines the observed state of Approval
+          properties:
+            decisionTime:
+              format: date-time
+              type: string
+            result:
+              type: string
+          required:
+          - result
+          type: object
+    ApprovalList:
+      type: object
+      description: List of approvals
+      properties:
+        apiVersion:
+          type: string
+        kind:
+          type: string
+        metadata:
+          type: object
+        items:
+          items:
+            $ref: '#/components/schemas/Approval'
+          type: array
