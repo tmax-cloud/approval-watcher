@@ -98,7 +98,7 @@ func decisionHandler(w http.ResponseWriter, r *http.Request) {
 	tokenString := extractToken(r)
 	if tokenString == "" {
 		log.Info("no access token in the request header")
-		responseMessage(w, http.StatusBadRequest, watcher.Response{
+		responseMessage(w, http.StatusUnauthorized, watcher.Response{
 			Result:  false,
 			Message: "invalid token",
 		})
@@ -108,7 +108,7 @@ func decisionHandler(w http.ResponseWriter, r *http.Request) {
 	err := validateToken(tokenString)
 	if err != nil {
 		log.Error(err, "error occurs while validating token")
-		responseMessage(w, http.StatusBadRequest, watcher.Response{
+		responseMessage(w, http.StatusUnauthorized, watcher.Response{
 			Result:  false,
 			Message: "invalid token",
 		})
