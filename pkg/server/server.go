@@ -130,7 +130,12 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 	defer sendResp.Body.Close()
 	if sendResp.StatusCode != http.StatusOK {
-		respondError(w, http.StatusInternalServerError, fmt.Sprintf("Response status code: %d", sendResp.StatusCode))
+		respObj := &watcher.Response{}
+		dec := json.NewDecoder(sendResp.Body)
+		if err := dec.Decode(respObj); err != nil {
+			respondError(w, http.StatusInternalServerError, err.Error())
+		}
+		respondError(w, sendResp.StatusCode, respObj.Message)
 		return
 	}
 
