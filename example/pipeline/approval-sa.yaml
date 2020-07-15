@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: approval-sa
+  namespace: default
+secrets:
+  - name: ck-registry
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: approval-role
+  namespace: default
+rules:
+- apiGroups: ["apps"]
+  #
+  # at the HTTP level, the name of the resource for accessing Deployment
+  # objects is "deployments"
+  resources: ["deployments"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: approval-rolebinding
+  namespace: default
+subjects:
+- kind: ServiceAccount
+  name: approval-sa # Name is case sensitive
+roleRef:
+  kind: Role
+  name: approval-role
+  apiGroup: rbac.authorization.k8s.io
+
