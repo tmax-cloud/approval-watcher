@@ -3,6 +3,7 @@ package internal
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -11,6 +12,10 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	tmaxv1 "github.com/tmax-cloud/approval-watcher/pkg/apis/tmax/v1"
+)
+
+const (
+	TektonLabelPrefix = "tekton.dev/"
 )
 
 func GetApproval(c client.Client, name types.NamespacedName) (*tmaxv1.Approval, error) {
@@ -22,16 +27,23 @@ func GetApproval(c client.Client, name types.NamespacedName) (*tmaxv1.Approval, 
 	return approval, nil
 }
 
-func CreateApproval(c client.Client, name types.NamespacedName, podName string, userList []string) error {
+func CreateApproval(c client.Client, name types.NamespacedName, pod *corev1.Pod, userList []string) error {
 	logf.Log.Info("Creating Approval...")
+	label := GenerateUserLabel(userList)
+	// Add Tekton labels, if exist
+	for k, v := range pod.ObjectMeta.Labels {
+		if strings.HasPrefix(k, TektonLabelPrefix) {
+			label[k] = v
+		}
+	}
 	approval := &tmaxv1.Approval{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name.Name,
 			Namespace: name.Namespace,
-			Labels:    GenerateUserLabel(userList),
+			Labels:    label,
 		},
 		Spec: tmaxv1.ApprovalSpec{
-			PodName: podName,
+			PodName: pod.Name,
 			Users:   userList,
 		},
 		Status: tmaxv1.ApprovalStatus{
@@ -59,7 +71,7 @@ func UpdateApproval(c client.Client, name types.NamespacedName, result tmaxv1.Re
 			return err
 		}
 	} else {
-		return fmt.Errorf("object Approval %s/%s is already in status %s", name.Namespace, name.Name, string(approval.Status.Result))
+		logf.Log.Info(fmt.Sprintf("object Approval %s/%s is already in status %s", name.Namespace, name.Name, string(approval.Status.Result)))
 	}
 
 	return nil
