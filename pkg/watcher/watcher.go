@@ -153,7 +153,7 @@ func handleApprovalStepStarted(pod *corev1.Pod, cont *corev1.Container) {
 			log.Error(err, fmt.Sprintf("cannot process users list %s", usersString))
 			return
 		}
-		if err := internal.CreateApproval(k8sClient, name, pod.Name, users); err != nil {
+		if err := internal.CreateApproval(k8sClient, name, pod, users); err != nil {
 			log.Error(err, "cannot create approval")
 			return
 		}
