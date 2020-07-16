@@ -1,0 +1,95 @@
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: sonar-scan-java-maven
+spec:
+  description: Sonar scan task for Java Maven projects
+  params:
+    - name: SONAR_URL
+      description: Sonar Qube server URL
+    - name: SONAR_TOKEN
+      description: Token for sonar qube
+    - name: SONAR_PROJECT_ID
+      description: Project ID in sonar qube
+  resources:
+    inputs:
+      - name: source
+        type: git
+  results:
+    - name: project-id
+      description: Project ID for sonar qube
+    - name: sonar-webhook-result
+      description: webhook result from sonarqube
+    - name: sonar-webhook-key
+      description: webhook key
+  steps:
+    - name: pre
+      image: 172.22.11.2:30500/sonar-client:v1
+      imagePullPolicy: Always
+      command:
+        - node
+        - --unhandled-rejections=strict
+        - /client/index.js
+        - pre
+      env:
+        - name: SONAR_URL
+          value: $(params.SONAR_URL)
+        - name: SONAR_TOKEN
+          value: $(params.SONAR_TOKEN)
+        - name: SONAR_PROJECT_ID
+          value: $(params.SONAR_PROJECT_ID)
+        - name: SONAR_PROJECT_ID_FILE
+          value: $(results.project-id.path)
+        - name: SONAR_WEBHOOK_KEY_FILE
+          value: $(results.sonar-webhook-key.path)
+      # - name: DEBUG
+      #   value: 'sonarclient:'
+    - name: build-and-scan
+      image: maven:3.3
+      imagePullPolicy: Always
+      script: |
+        mvn clean verify sonar:sonar -Dsonar.host.url=$(params.SONAR_URL) -Dsonar.login=$(params.SONAR_TOKEN) -Dsonar.projectKey=$(cat $(results.project-id.path))
+      workingDir: /workspace/source
+    - name: post
+      image: 172.22.11.2:30500/sonar-client:v1
+      imagePullPolicy: Always
+      command:
+        - node
+        - --unhandled-rejections=strict
+        - /client/index.js
+        - post
+      env:
+        - name: SONAR_URL
+          value: $(params.SONAR_URL)
+        - name: SONAR_TOKEN
+          value: $(params.SONAR_TOKEN)
+        - name: SONAR_RESULT_FILE
+          value: /webhook-result/result.json
+        - name: SONAR_WEBHOOK_KEY_FILE
+          value: $(results.sonar-webhook-key.path)
+      # - name: DEBUG
+      #   value: 'sonarclient:'
+      volumeMounts:
+        - name: webhook-result
+          mountPath: /webhook-result
+  sidecars:
+    - name: webhook
+      image: 172.22.11.2:30500/sonar-client:v1
+      imagePullPolicy: Always
+      command:
+        - node
+        - /client/index.js
+        - webhook
+      env:
+        - name: SONAR_RESULT_FILE
+          value: /webhook-result/result.json
+        - name: SONAR_RESULT_DEST
+          value: $(results.sonar-webhook-result.path)
+      # - name: DEBUG
+      #   value: 'sonarclient:'
+      volumeMounts:
+        - name: webhook-result
+          mountPath: /webhook-result
+  volumes:
+    - name: webhook-result
+      emptyDir: {}
