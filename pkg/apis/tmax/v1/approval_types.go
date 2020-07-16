@@ -43,6 +43,7 @@ type ApprovalStatus struct {
 // Approval is the Schema for the approvals API
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=approvals,scope=Namespaced
+// +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.result",description="Current status of Approval"
 type Approval struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

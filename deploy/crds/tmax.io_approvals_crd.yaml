@@ -3,6 +3,11 @@ kind: CustomResourceDefinition
 metadata:
   name: approvals.tmax.io
 spec:
+  additionalPrinterColumns:
+  - JSONPath: .status.result
+    description: Current status of Approval
+    name: Status
+    type: string
   group: tmax.io
   names:
     kind: Approval
