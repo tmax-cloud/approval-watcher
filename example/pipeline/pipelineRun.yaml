@@ -1,0 +1,45 @@
+apiVersion: tekton.dev/v1alpha1
+kind: PipelineRun
+metadata:
+  name: tomcat-pipeline-approval-run
+spec:
+  pipelineRef:
+    name: tomcat-pipeline-approval
+  serviceAccountName: approval-sa
+  resources:
+    - name: source-repo
+      resourceSpec:
+        type: git
+        params:
+          - name: url
+            value: https://github.com/sunghyunkim3/TomcatMavenApp
+    - name: image
+      resourceSpec:
+        type: image
+        params:
+          - name: url
+            value: 172.22.11.2:30500/tomcat-approved-sample
+  params:
+    - name: app-name
+      value: tomcat-sample-approved
+    - name: deploy-cfg-name
+      value: ''
+    - name: deploy-env-json
+      value: '{}'
+    - name: TEST_NS
+      value: approval-test
+    - name: OP_NS
+      value: approval-op
+    - name: SONAR_URL
+      value: http://172.22.11.21:9000/
+    - name: SONAR_TOKEN
+      value: 6f773c6959bc111806adefba33862cc7e85d5679
+    - name: SONAR_PROJECT_ID
+      value: tomcat-approved-sample
+    - name: CM_APPROVER_DEV
+      value: approver-dev
+    - name: CM_APPROVER_QA
+      value: approver-qa
+    - name: CM_APPROVER_OP
+      value: approver-op
+  timeout: 120h

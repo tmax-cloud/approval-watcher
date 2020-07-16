@@ -3,32 +3,93 @@ kind: ServiceAccount
 metadata:
   name: approval-sa
   namespace: default
-
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: approval-role
-  namespace: default
+  namespace: approval-test
 rules:
-- apiGroups: ["apps"]
-  #
-  # at the HTTP level, the name of the resource for accessing Deployment
-  # objects is "deployments"
-  resources: ["deployments"]
-  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-
+  - apiGroups:
+      - apps
+    resources:
+      - deployments
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+      - secrets
+    verbs:
+      - get
+      - list
+      - create
+      - update
+      - patch
+      - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: approval-role
+  namespace: approval-op
+rules:
+  - apiGroups:
+      - apps
+    resources:
+      - deployments
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+      - secrets
+    verbs:
+      - get
+      - list
+      - create
+      - update
+      - patch
+      - delete
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: approval-rolebinding
-  namespace: default
-subjects:
-- kind: ServiceAccount
-  name: approval-sa # Name is case sensitive
+  namespace: approval-test
 roleRef:
+  apiGroup: rbac.authorization.k8s.io
   kind: Role
   name: approval-role
+subjects:
+  - kind: ServiceAccount
+    name: approval-sa
+    namespace: default
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: approval-rolebinding
+  namespace: approval-op
+roleRef:
   apiGroup: rbac.authorization.k8s.io
-
+  kind: Role
+  name: approval-role
+subjects:
+  - kind: ServiceAccount
+    name: approval-sa
+    namespace: default

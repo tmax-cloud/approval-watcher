@@ -1,0 +1,39 @@
+apiVersion: tekton.dev/v1beta1
+kind: TaskRun
+metadata:
+  name: approved-s2i
+  namespace: default
+spec:
+  timeout: 120h
+  taskRef:
+    name: s2i-with-approval
+    kind: Task
+  resources:
+    inputs:
+      - name: source
+        resourceSpec:
+          type: git
+          params:
+            - name: url
+              value: https://github.com/sunghyunkim3/TomcatMavenApp
+    outputs:
+      - name: image
+        resourceSpec:
+          type: image
+          params:
+            - name: url
+              value: 172.22.11.2:30500/tomcat-sample-test
+  params:
+  - name: BUILDER_IMAGE
+    value: tmaxcloudck/s2i-tomcat:latest
+  - name: CM_APPROVER_DEV
+    value: approver-dev
+  - name: MAIL_TITLE
+    value: "[빌드 승인 요청] TomcatMavenApp 승인 요청"
+  - name: MAIL_CONTENT
+    value: |
+      소스 코드 분석 완료
+
+      http://172.22.11.8:19000/dashboard?id=pipeline-name (접속정보: admin/admin)
+
+      결과 확인 후 빌드 승인 요청

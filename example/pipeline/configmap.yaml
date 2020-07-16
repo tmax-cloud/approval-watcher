@@ -1,0 +1,29 @@
+# Developer - who will approve after static code analyze
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: approver-dev
+  namespace: default
+data:
+  users: |
+    shkim-tmax.co.kr=sunghyun_kim3@tmax.co.kr
+---
+# QA - who will approve to deploy to test environment / approve after the test
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: approver-qa
+  namespace: default
+data:
+  users: |
+    shkim-tmax.co.kr=sunghyun_kim3@tmax.co.kr
+---
+# Operator - who will approve to deploy to product environment
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: approver-op
+  namespace: default
+data:
+  users: |
+    shkim-tmax.co.kr=sunghyun_kim3@tmax.co.kr
