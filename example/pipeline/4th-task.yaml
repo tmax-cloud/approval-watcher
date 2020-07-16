@@ -43,7 +43,7 @@ spec:
     - name: approver-list-1
       mountPath: /tmp/config
   - name: approval-1
-    image: 172.22.11.2:30500/approval-step-server:0.0.1
+    image: 172.22.11.2:30500/approval-step-server:shkim
     imagePullPolicy: Always
     volumeMounts:
     - name: approver-list-1
