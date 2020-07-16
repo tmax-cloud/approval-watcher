@@ -1,0 +1,26 @@
+apiVersion: tekton.dev/v1alpha1
+kind: TaskRun
+metadata:
+  name: forth-task-run
+  namespace: default
+spec:
+  serviceAccountName: approval-sa
+  taskRef:
+    name: forth-task
+  params:
+  - name: forth-user-1
+    value: approver-dev
+  - name: app-name
+    value: approval-test-app
+  - name: image-url
+    value: ubuntu:latest
+  - name: deploy-namespace
+    value: default
+  resources:
+    inputs:
+    - name: image
+      resourceSpec:
+        type: image
+        params:
+        - name: url
+          value: ubuntu:latest

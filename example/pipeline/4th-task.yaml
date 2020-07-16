@@ -1,0 +1,86 @@
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: forth-task
+  namespace: default
+spec:
+  params:
+  - name: forth-user-1
+    description: configmap name which contains users name
+  - name: app-name
+    description: Deployment name
+  - name: image-url
+    description: Updated image url:tag
+    default: $(inputs.resources.image.url)
+  - name: deploy-namespace
+    description: namespace to deploy deployment
+  - name: deploy-cfg-name
+    description: Deployment configmap name
+    default: ""
+  - name: deploy-env-json
+    description: Deployment environment variable in JSON object form
+    default: "{}"
+  resources:
+    inputs:
+    - name: image
+      type: image
+  steps:
+  - name: email-1
+    image: tmaxcloudck/mail-sender-client:latest
+    env:
+    - name: MAIL_SERVER
+      value: http://mail-sender.default:9999/
+    - name: MAIL_FROM
+      value: no-reply-tc@tmax.co.kr
+    - name: MAIL_SUBJECT
+      value: Approval is requested for CI/CD
+    - name: MAIL_CONTENT
+      value: |
+        QA Test Approved.
+        Please approve the step to proceed to next step.
+        Deployment will be created on namespace $(params.deploy-namespace)
+    volumeMounts:
+    - name: approver-list-1
+      mountPath: /tmp/config
+  - name: approval-1
+    image: 172.22.11.2:30500/approval-step-server:0.0.1
+    imagePullPolicy: Always
+    volumeMounts:
+    - name: approver-list-1
+      mountPath: /tmp/config
+  - name: create-yaml
+    image: tmaxcloudck/cicd-util:1.0.1
+    imagePullPolicy: Always
+    command:
+    - "make-deployment"
+    args:
+    - $(params.app-name)
+    - $(params.image-url)
+    volumeMounts:
+    - mountPath: /generate
+      name: generate
+    env:
+    - name: CONFIGMAP_NAME
+      value: $(params.deploy-cfg-name)
+    - name: DEPLOY_ENV_JSON
+      value: $(params.deploy-env-json)
+  - name: run-kubectl
+    image: tmaxcloudck/cicd-util:1.0.1
+    command:
+    - "kubectl"
+    args:
+    - apply
+    - -f
+    - /generate/deployment.yaml
+    - -n
+    - $(params.deploy-namespace)
+    volumeMounts:
+    - mountPath: /generate
+      name: generate
+  volumes:
+  - name: approver-list-1
+    configmap:
+      name: $(params.forth-user-1)
+  - name: generate
+    emptyDir: {}
+
