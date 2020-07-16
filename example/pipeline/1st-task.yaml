@@ -24,7 +24,7 @@ spec:
       description: webhook key
   steps:
     - name: pre
-      image: 172.22.11.2:30500/sonar-client:v1
+      image: tmaxcloudck/sonar-client:0.0.1
       imagePullPolicy: Always
       command:
         - node
@@ -51,7 +51,7 @@ spec:
         mvn clean verify sonar:sonar -Dsonar.host.url=$(params.SONAR_URL) -Dsonar.login=$(params.SONAR_TOKEN) -Dsonar.projectKey=$(cat $(results.project-id.path))
       workingDir: /workspace/source
     - name: post
-      image: 172.22.11.2:30500/sonar-client:v1
+      image: tmaxcloudck/sonar-client:0.0.1
       imagePullPolicy: Always
       command:
         - node
@@ -74,7 +74,7 @@ spec:
           mountPath: /webhook-result
   sidecars:
     - name: webhook
-      image: 172.22.11.2:30500/sonar-client:v1
+      image: tmaxcloudck/sonar-client:0.0.1
       imagePullPolicy: Always
       command:
         - node
