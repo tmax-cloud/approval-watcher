@@ -91,6 +91,12 @@ func handlePodEvent(pod *corev1.Pod) {
 			continue
 		}
 
+		// If pod is being deleted, make Approval canceled
+		if pod.ObjectMeta.DeletionTimestamp != nil {
+			handlePodDelete(pod, &cont)
+			continue
+		}
+
 		state := getStepState(pod, &cont)
 
 		if state == PodStateRunning {
@@ -185,6 +191,21 @@ func handleApprovalStepFinished(pod *corev1.Pod, cont *corev1.Container) {
 		return
 	}
 	if err := internal.UpdateApproval(k8sClient, name, result); err != nil {
+		log.Error(err, "cannot update approval")
+		return
+	}
+}
+
+// Executed when the pod is queued to be deleted
+func handlePodDelete(pod *corev1.Pod, cont *corev1.Container) {
+	log.Info("Pod is terminating...")
+
+	name, err := generateApprovalName(pod, cont)
+	if err != nil {
+		log.Error(err, "cannot generate approval name")
+		return
+	}
+	if err := internal.UpdateApproval(k8sClient, name, tmaxv1.ResultCanceled); err != nil {
 		log.Error(err, "cannot update approval")
 		return
 	}

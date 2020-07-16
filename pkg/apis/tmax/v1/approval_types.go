@@ -11,6 +11,7 @@ const (
 	ResultApproved Result = "Approved"
 	ResultRejected Result = "Rejected"
 	ResultFailed   Result = "Failed"
+	ResultCanceled Result = "Canceled"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
