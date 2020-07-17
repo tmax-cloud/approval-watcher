@@ -46,12 +46,16 @@ func CreateApproval(c client.Client, name types.NamespacedName, pod *corev1.Pod,
 			PodName: pod.Name,
 			Users:   userList,
 		},
-		Status: tmaxv1.ApprovalStatus{
-			Result: tmaxv1.ResultWaiting,
-		},
 	}
 
 	if err := c.Create(context.TODO(), approval); err != nil {
+		return err
+	}
+
+	// Non-atomic status update... race may occur
+	approvalWithStatus := approval.DeepCopy()
+	approvalWithStatus.Status.Result = tmaxv1.ResultWaiting
+	if err := c.Status().Patch(context.TODO(), approvalWithStatus, client.MergeFrom(approval)); err != nil {
 		return err
 	}
 	return nil
