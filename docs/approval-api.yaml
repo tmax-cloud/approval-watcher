@@ -7,9 +7,6 @@ info:
   contact:
     email: jaewon_kim@tmax.co.kr
 servers:
-# Added by API Auto Mocking Plugin
-  - description: SwaggerHub API Auto Mocking
-    url: https://virtserver.swaggerhub.com/ck2-2/Approval-api/1.0.0
   - url: 192.168.6.171:32765
     description: server for getting approval list
   - url: 192.168.6.171:10999
@@ -122,6 +119,10 @@ paths:
                             "users":[
                               "jaewon-tmax.co.kr"
                             ]
+                         },
+                         "status": {
+                           "decisionTime": "2020-07-17T05:24:23Z",
+                           "result": "Approved"
                          }
                       }
                    ],
@@ -172,6 +173,10 @@ paths:
                     "users":[
                        "admin-tmax.co.kr"
                     ]
+                 },
+                 "status": {
+                   "decisionTime": "2020-07-17T05:24:23Z",
+                   "result": "Rejected"
                  }
               }
 components:
@@ -237,6 +242,7 @@ components:
               type: string
             result:
               type: string
+              enum: [Waiting, Approved, Rejected, Canceled]
           required:
           - result
           type: object
