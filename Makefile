@@ -13,17 +13,15 @@ STEP_SERVER_IMG   = $(REGISTRY)/$(STEP_SERVER_NAME):$(VERSION)
 
 BIN = ./build/_output/bin
 
-BUILD_FLAG  = -gcflags all=-trimpath=/home/sunghyun/dev -asmflags all=-trimpath=/home/sunghyun/dev
-
 
 .PHONY: build build-watcher build-step-server
 build: build-watcher build-step-server
 
 build-watcher:
-	CGO_ENABLED=0 go build -o $(BIN)/approval-watcher $(BUILD_FLAG) $(PACKAGE_NAME)/cmd/watcher
+	CGO_ENABLED=0 go build -o $(BIN)/approval-watcher $(PACKAGE_NAME)/cmd/watcher
 
 build-step-server:
-	CGO_ENABLED=0 go build -o $(BIN)/approval-step-server $(BUILD_FLAG) $(PACKAGE_NAME)/cmd/step-server
+	CGO_ENABLED=0 go build -o $(BIN)/approval-step-server $(PACKAGE_NAME)/cmd/step-server
 
 
 .PHONY: image image-watcher image-step-server
