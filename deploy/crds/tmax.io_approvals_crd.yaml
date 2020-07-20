@@ -8,6 +8,14 @@ spec:
     description: Current status of Approval
     name: Status
     type: string
+  - JSONPath: .metadata.creationTimestamp
+    description: Created time
+    name: Created
+    type: date
+  - JSONPath: .status.decisionTime
+    description: Decided time
+    name: Decided
+    type: date
   group: tmax.io
   names:
     kind: Approval
