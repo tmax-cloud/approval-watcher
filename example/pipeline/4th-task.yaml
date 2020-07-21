@@ -2,11 +2,12 @@ apiVersion: tekton.dev/v1alpha1
 kind: Task
 metadata:
   name: forth-task
-  namespace: default
 spec:
   params:
   - name: forth-user-1
     description: configmap name which contains users name
+  - name: mail-title-1
+  - name: mail-content-1
   - name: app-name
     description: Deployment name
   - name: image-url
@@ -29,16 +30,13 @@ spec:
     image: tmaxcloudck/mail-sender-client:latest
     env:
     - name: MAIL_SERVER
-      value: http://mail-sender.default:9999/
+      value: http://mail-sender.approval-system:9999/
     - name: MAIL_FROM
       value: no-reply-tc@tmax.co.kr
     - name: MAIL_SUBJECT
-      value: Approval is requested for CI/CD
+      value: $(params.mail-title-1)
     - name: MAIL_CONTENT
-      value: |
-        QA Test Approved.
-        Please approve the step to proceed to next step.
-        Deployment will be created on namespace $(params.deploy-namespace)
+      value: $(params.mail-content-1)
     volumeMounts:
     - name: approver-list-1
       mountPath: /tmp/config

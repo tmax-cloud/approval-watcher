@@ -2,13 +2,24 @@ apiVersion: tekton.dev/v1alpha1
 kind: Task
 metadata:
   name: third-task
-  namespace: default
 spec:
   params:
   - name: third-user-1
     description: configmap name which contains users name
   - name: third-user-2
     description: configmap name which contains users name
+  - name: mail-title-1
+    default: "[배포 승인 요청] App 배포 승인 요청"
+  - name: mail-content-1
+    default: |
+            namespace 환경에 QA 배포 예정
+            승인이 필요합니다.
+  - name: mail-title-2
+    default: "[배포 확인 요청] 테스트 후 승인 요청"
+  - name: mail-content-2
+    default: |
+            namespace 환경에 QA 배포 완료
+            테스트 후 승인이 필요합니다.
   - name: app-name
     description: Deployment name
   - name: image-url
@@ -31,16 +42,13 @@ spec:
     image: tmaxcloudck/mail-sender-client:latest
     env:
     - name: MAIL_SERVER
-      value: http://mail-sender.default:9999/
+      value: http://mail-sender.approval-system:9999/
     - name: MAIL_FROM
       value: no-reply-tc@tmax.co.kr
     - name: MAIL_SUBJECT
-      value: Approval is requested for CI/CD
+      value: $(params.mail-title-1)
     - name: MAIL_CONTENT
-      value: |
-        Succeed to build.
-        Please approve the step to proceed to next step.
-        Deployment will be created on namespace $(params.deploy-namespace)
+      value: $(params.mail-content-1)
     volumeMounts:
     - name: approver-list-1
       mountPath: /tmp/config
@@ -83,15 +91,13 @@ spec:
     image: tmaxcloudck/mail-sender-client:latest
     env:
     - name: MAIL_SERVER
-      value: http://mail-sender.default:9999/
+      value: http://mail-sender.approval-system:9999/
     - name: MAIL_FROM
       value: no-reply-tc@tmax.co.kr
     - name: MAIL_SUBJECT
-      value: Approval is requested for CI/CD
+      value: $(params.mail-title-2)
     - name: MAIL_CONTENT
-      value: |
-        Succeed to deploy on namespace $(params.deploy-namespace).
-        Please approve the step to proceed to next step.
+      value: $(params.mail-content-2)
     volumeMounts:
     - name: approver-list-2
       mountPath: /tmp/config
