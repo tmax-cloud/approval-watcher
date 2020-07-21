@@ -8,6 +8,25 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: approval-role
+  namespace: default
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+      - secrets
+    verbs:
+      - get
+      - list
+      - create
+      - update
+      - patch
+      - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: approval-role
   namespace: approval-test
 rules:
   - apiGroups:
@@ -18,18 +37,6 @@ rules:
       - get
       - list
       - watch
-      - create
-      - update
-      - patch
-      - delete
-  - apiGroups:
-      - ""
-    resources:
-      - configmaps
-      - secrets
-    verbs:
-      - get
-      - list
       - create
       - update
       - patch
@@ -53,18 +60,20 @@ rules:
       - update
       - patch
       - delete
-  - apiGroups:
-      - ""
-    resources:
-      - configmaps
-      - secrets
-    verbs:
-      - get
-      - list
-      - create
-      - update
-      - patch
-      - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: approval-rolebinding
+  namespace: default
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: approval-role
+subjects:
+  - kind: ServiceAccount
+    name: approval-sa
+    namespace: default
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
