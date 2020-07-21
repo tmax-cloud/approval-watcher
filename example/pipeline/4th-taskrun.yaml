@@ -2,7 +2,6 @@ apiVersion: tekton.dev/v1alpha1
 kind: TaskRun
 metadata:
   name: forth-task-run
-  namespace: default
 spec:
   serviceAccountName: approval-sa
   taskRef:
@@ -10,6 +9,13 @@ spec:
   params:
   - name: forth-user-1
     value: approver-dev
+  - name: mail-title-1
+    value: "[배포 승인 요청] 운영 환경 배포 승인 요청"
+  - name: mail-content-1
+    value: |
+      테스트 환경 테스트 완료
+
+      운영 환경 배포 승인 요청
   - name: app-name
     value: approval-test-app
   - name: image-url
