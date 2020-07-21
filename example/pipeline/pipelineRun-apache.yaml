@@ -1,0 +1,45 @@
+apiVersion: tekton.dev/v1alpha1
+kind: PipelineRun
+metadata:
+  name: apache-pipeline-approval-run
+spec:
+  pipelineRef:
+    name: apache-pipeline-approval
+  serviceAccountName: approval-sa
+  resources:
+    - name: source-repo
+      resourceSpec:
+        type: git
+        params:
+          - name: url
+            value: https://github.com/microsoft/project-html-website
+    - name: image
+      resourceSpec:
+        type: image
+        params:
+          - name: url
+            value: 172.22.11.2:30500/apache-approved-sample
+  params:
+    - name: app-name
+      value: apache-sample-approved
+    - name: deploy-cfg-name
+      value: ''
+    - name: deploy-env-json
+      value: '{}'
+    - name: TEST_NS
+      value: approval-test
+    - name: OP_NS
+      value: approval-op
+    - name: SONAR_URL
+      value: http://172.22.11.14:9000/
+    - name: SONAR_TOKEN
+      value: 336f3dc01b212b9a8e93c851b953308e6c91a5df
+    - name: SONAR_PROJECT_ID
+      value: apache-sample-approved
+    - name: CM_APPROVER_DEV
+      value: approver-dev
+    - name: CM_APPROVER_QA
+      value: approver-qa
+    - name: CM_APPROVER_OP
+      value: approver-op
+  timeout: 120h

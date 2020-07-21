@@ -1,0 +1,123 @@
+apiVersion: tekton.dev/v1alpha1
+kind: Pipeline
+metadata:
+  name: apache-pipeline-approval
+spec:
+  params:
+    - description: Application name
+      name: app-name
+      type: string
+    - description: Configmap name for description
+      name: deploy-cfg-name
+      type: string
+    - description: Deployment environment variable in JSON object form
+      name: deploy-env-json
+      type: string
+    - name: TEST_NS
+    - name: OP_NS
+    - name: SONAR_URL
+    - name: SONAR_TOKEN
+    - name: SONAR_PROJECT_ID
+    - name: CM_APPROVER_DEV
+    - name: CM_APPROVER_QA
+    - name: CM_APPROVER_OP
+  resources:
+    - name: source-repo
+      type: git
+    - name: image
+      type: image
+  tasks:
+    - name: analyze
+      taskRef:
+        name: sonar-scan
+        kind: Task
+      resources:
+        inputs:
+          - name: source
+            resource: source-repo
+      params:
+        - name: SONAR_URL
+          value: $(params.SONAR_URL)
+        - name: SONAR_TOKEN
+          value: $(params.SONAR_TOKEN)
+        - name: SONAR_PROJECT_ID
+          value: $(params.SONAR_PROJECT_ID)
+    - name: build-source
+      taskRef:
+        name: s2i-with-approval
+        kind: Task
+      runAfter:
+        - analyze
+      resources:
+        inputs:
+          - name: source
+            resource: source-repo
+        outputs:
+          - name: image
+            resource: image
+      params:
+        - name: BUILDER_IMAGE
+          value: tmaxcloudck/s2i-apache:2.4
+        - name: PACKAGE_SERVER_URL
+          value: ""
+        - name: REGISTRY_SECRET_NAME
+          value: ""
+        - name: CM_APPROVER_DEV
+          value: $(params.CM_APPROVER_DEV)
+        - name: MAIL_TITLE
+          value: "[빌드 승인 요청] $(params.app-name) 승인 요청"
+        - name: MAIL_CONTENT
+          value: |
+            소스 코드 분석 완료
+
+            $(params.SONAR_URL)/dashboard?id=$(params.SONAR_PROJECT_ID) (접속정보: admin/admin)
+
+            결과 확인 후 빌드 승인 요청
+    - name: deploy-test
+      taskRef:
+        kind: Task
+        name: third-task
+      runAfter:
+        - build-source
+      resources:
+        inputs:
+          - name: image
+            resource: image
+      params:
+        - name: app-name
+          value: $(params.app-name)
+        - name: image-url
+          value: $(tasks.build-source.results.image-url)
+        - name: deploy-cfg-name
+          value: $(params.deploy-cfg-name)
+        - name: deploy-env-json
+          value: $(params.deploy-env-json)
+        - name: deploy-namespace
+          value: $(params.TEST_NS)
+        - name: third-user-1
+          value: $(params.CM_APPROVER_QA)
+        - name: third-user-2
+          value: $(params.CM_APPROVER_QA)
+    - name: deploy-op
+      taskRef:
+        kind: Task
+        name: forth-task
+      runAfter:
+        - deploy-test
+      resources:
+        inputs:
+          - name: image
+            resource: image
+      params:
+        - name: app-name
+          value: $(params.app-name)
+        - name: image-url
+          value: $(tasks.build-source.results.image-url)
+        - name: deploy-cfg-name
+          value: $(params.deploy-cfg-name)
+        - name: deploy-env-json
+          value: $(params.deploy-env-json)
+        - name: deploy-namespace
+          value: $(params.OP_NS)
+        - name: forth-user-1
+          value: $(params.CM_APPROVER_QA)
