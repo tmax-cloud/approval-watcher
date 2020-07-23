@@ -6,16 +6,13 @@
 4. `3차 승인` 테스트 환경에서 테스트 완료 승인
 5. `4차 승인` 실제 서비스 환경(`approval-op` 네임스페이스) 배포 승인
 ## 주의사항
-- `<NAMESPACE>` 부분은 PipelineRun이 구동될 네임스페이스 이름으로 수정 (수정해야할 부분은 아래와 같음)  
-    - SonarQube TemplateInstance
-    - Mail-sender / Approval-watcher 설치
-    - ServiceAccount/RoleBinding
-    - ClusterTasks
-    - 시나리오 TemplateInstance
-- SonarQube / Mail-sender / Approval-watcher는 모두 같은 네임스페이스에 설치
-- `<User>=<Email>` 부분은 각각 HyperCloud User Object 이름 및 이메일 주소 입력 (다수 입력 시 한 줄에 한명씩 입력)
+- SonarQube / Mail-sender / Approval-watcher는 모두 같은 네임스페이스 (`approval-system`)에 설치
+- ServiceAccount/RoleBinding/TemplateInstance 생성 시 `<NAMESPACE>` 부분은 모두 PipelineRun이 구동될 Namespace로 치환
+- 마지막 TemplateInstance 생성 시 `<User>=<Email>` 부분은 각각 HyperCloud User Object 이름 및 이메일 주소 입력 (다수 입력 시 한 줄에 한명씩 입력)
 ## 사전 작업
-1. SonarQube 설치
+1. [Mail-sender 설치](https://github.com/cqbqdd11519/mail-notifier/blob/master/docs/installation.md)  
+2. [Approval Watcher 설치](installation.md)
+3. SonarQube 설치
    ```yaml
    apiVersion: tmax.io/v1
    kind: Template
@@ -143,7 +140,7 @@
        - name: APP_NAME
          value: sonarqube-test-deploy
        - name: NAMESPACE
-         value: <NAMESPACE>
+         value: approval-system
        - name: STORAGE
          value: 10Gi
        - name: SERVICE_TYPE
@@ -151,14 +148,11 @@
    ```
    - SonarQube가 설치된 Node IP 및 NodePort 확인
    ```bash
-   kubectl -n <NAMESPACE> get pod -l 'app=sonarqube-test-deploy' -o jsonpath='{.items[].status.hostIP}'
-   kubectl -n <NAMESPACE> get service sonarqube-test-deploy-service -o jsonpath='{.spec.ports[0].nodePort}'
+   kubectl -n approval-system get pod -l 'app=sonarqube-test-deploy' -o jsonpath='{.items[].status.hostIP}'
+   kubectl -n approval-system get service sonarqube-test-deploy-service -o jsonpath='{.spec.ports[0].nodePort}'
    ```
    - SonarQube (`http://<hostIP>:<PORT>/account/security` / ID: admin / PW: admin) 접속해 새로운 Token 생성 및 저장
    - SonarQube (`http://<hostIP>:<PORT>/projects/create?mode=manual`) 접속해 `apache-sample-approved` 프로젝트 생성
-   
-2. [Mail-sender 설치](https://github.com/cqbqdd11519/mail-notifier/blob/master/docs/installation.md)  
-3. [Approval Watcher 설치](installation.md)
 
 ## 시나리오 실행
 1. Namespace/ServiceAccount/Role/RoleBinding 생성
@@ -378,7 +372,7 @@
          imagePullPolicy: Always
          env:
          - name: MAIL_SERVER
-           value: http://mail-sender.<NAMESPACE>:9999/
+           value: http://mail-sender.approval-system:9999/
          - name: MAIL_FROM
            value: no-reply-tc@tmax.co.kr
          - name: MAIL_SUBJECT
@@ -553,7 +547,7 @@
        image: tmaxcloudck/mail-sender-client:latest
        env:
        - name: MAIL_SERVER
-         value: http://mail-sender.<NAMESPACE>:9999/
+         value: http://mail-sender.approval-system:9999/
        - name: MAIL_FROM
          value: no-reply-tc@tmax.co.kr
        - name: MAIL_SUBJECT
@@ -602,7 +596,7 @@
        image: tmaxcloudck/mail-sender-client:latest
        env:
        - name: MAIL_SERVER
-         value: http://mail-sender.<NAMESPACE>:9999/
+         value: http://mail-sender.approval-system:9999/
        - name: MAIL_FROM
          value: no-reply-tc@tmax.co.kr
        - name: MAIL_SUBJECT
@@ -661,7 +655,7 @@
        image: tmaxcloudck/mail-sender-client:latest
        env:
        - name: MAIL_SERVER
-         value: http://mail-sender.<NAMESPACE>:9999/
+         value: http://mail-sender.approval-system:9999/
        - name: MAIL_FROM
          value: no-reply-tc@tmax.co.kr
        - name: MAIL_SUBJECT
@@ -1123,9 +1117,9 @@
           - name: SONAR_PROJECT_ID
             value: apache-sample-approved
           - name: APPROVER_LIST_DEV
-            value: shkim-tmax.co.kr=sunghyun_kim3@tmax.co.kr
+            value: <User>=<Email>
           - name: APPROVER_LIST_QA
-            value: shkim-tmax.co.kr=sunghyun_kim3@tmax.co.kr
+            value: <User>=<Email>
           - name: APPROVER_LIST_OP
-            value: shkim-tmax.co.kr=sunghyun_kim3@tmax.co.kr
+            value: <User>=<Email>
     ```
