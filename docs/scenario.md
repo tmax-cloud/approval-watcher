@@ -730,7 +730,7 @@
       - name: NAMESPACE_TEST
         displayName: NamespaceTest
         description: Application namespace (test env.)
-        required: true 
+        required: true
       - name: NAMESPACE_OP
         displayName: NamespaceOperation
         description: Application namespace (operation env.)
@@ -1012,6 +1012,20 @@
                   value: $(params.CM_APPROVER_QA)
                 - name: third-user-2
                   value: $(params.CM_APPROVER_QA)
+                - name: mail-title-1
+                  value: "[배포 승인 요청] $(params.app-name) 배포 승인 요청"
+                - name: mail-content-1
+                  value: |
+                    이미지 푸시 완료
+    
+                    $(params.TEST_NS)에 APP 배포를 위한 승인 필요
+                - name: mail-title-2
+                  value: "[배포 확인 요청] $(params.app-name) 테스트 후 승인 요청"
+                - name: mail-content-2
+                  value: |
+                    $(params.TEST_NS)에 $(params.app-name) 배포 완료
+    
+                    테스트 후 승인 요청
             - name: deploy-op
               taskRef:
                 kind: ClusterTask
@@ -1035,6 +1049,15 @@
                   value: $(params.OP_NS)
                 - name: forth-user-1
                   value: $(params.CM_APPROVER_QA)
+                - name: forth-user-1
+                  value: $(params.CM_APPROVER_QA)
+                - name: mail-title-1
+                  value: "[배포 승인 요청] $(params.app-name) 운영 환경 배포 승인 요청"
+                - name: mail-content-1
+                  value: |
+                    테스트 환경 승인 완료
+    
+                    운영 환경 배포 승인 요청
       - apiVersion: tekton.dev/v1alpha1
         kind: PipelineRun
         metadata:
