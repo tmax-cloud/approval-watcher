@@ -8,8 +8,8 @@
 ## 주의사항
 - SonarQube / Mail-sender / Approval-watcher는 모두 같은 네임스페이스 (`approval-system`)에 설치
 ## 사전 작업
-1. [Mail-sender 설치](https://github.com/cqbqdd11519/mail-notifier/blob/master/docs/installation.md)  
-2. [Approval Watcher 설치](installation.md)
+1. [Approval Watcher 설치](installation.md)
+2. [Mail-sender 설치](https://github.com/cqbqdd11519/mail-notifier/blob/master/docs/installation.md)  
 3. SonarQube 설치
    ```yaml
    apiVersion: tmax.io/v1
