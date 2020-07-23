@@ -226,6 +226,20 @@
    kind: RoleBinding
    metadata:
      name: approval-rolebinding
+     namespace: <NAMESPACE>
+   roleRef:
+     apiGroup: rbac.authorization.k8s.io
+     kind: ClusterRole
+     name: approval-role
+   subjects:
+   - kind: ServiceAccount
+     name: approval-sa
+     namespace: <NAMESPACE>
+   ---
+   apiVersion: rbac.authorization.k8s.io/v1
+   kind: RoleBinding
+   metadata:
+     name: approval-rolebinding
      namespace: approval-op
    roleRef:
      apiGroup: rbac.authorization.k8s.io
@@ -1047,8 +1061,6 @@
                   value: $(params.deploy-env-json)
                 - name: deploy-namespace
                   value: $(params.OP_NS)
-                - name: forth-user-1
-                  value: $(params.CM_APPROVER_QA)
                 - name: forth-user-1
                   value: $(params.CM_APPROVER_QA)
                 - name: mail-title-1
