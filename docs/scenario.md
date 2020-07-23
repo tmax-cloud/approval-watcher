@@ -10,12 +10,14 @@
 ## 사전 작업
 1. [Approval Watcher 설치](installation.md)
 2. [Mail-sender 설치](https://github.com/cqbqdd11519/mail-notifier/blob/master/docs/installation.md)  
-3. SonarQube 설치
+3. SonarQube 설치  
+(`<NAMESPACE>` 부분은 모두 PipelineRun이 구동될 Namespace로 치환)
    ```yaml
    apiVersion: tmax.io/v1
    kind: Template
    metadata:
      name: sonarqube-template
+     namespace: <NAMESPACE>
    shortDescription: "SonarQube Deployment"
    longDescription: "SonarQube Deployment"
    imageUrl: "https://upload.wikimedia.org/wikipedia/commons/e/e6/Sonarqube-48x200.png"
@@ -130,6 +132,7 @@
    kind: TemplateInstance
    metadata:
      name: sonarqube-template-instance
+     namespace: <NAMESPACE>
    spec:
      template:
        metadata:
@@ -138,7 +141,7 @@
        - name: APP_NAME
          value: sonarqube-test-deploy
        - name: NAMESPACE
-         value: approval-system
+         value: <NAMESPACE>
        - name: STORAGE
          value: 10Gi
        - name: SERVICE_TYPE
@@ -146,8 +149,8 @@
    ```
    - SonarQube가 설치된 Node IP 및 NodePort 확인
    ```bash
-   kubectl -n approval-system get pod -l 'app=sonarqube-test-deploy' -o jsonpath='{.items[].status.hostIP}'
-   kubectl -n approval-system get service sonarqube-test-deploy-service -o jsonpath='{.spec.ports[0].nodePort}'
+   kubectl -n <NAMESPACE> get pod -l 'app=sonarqube-test-deploy' -o jsonpath='{.items[].status.hostIP}'
+   kubectl -n <NAMESPACE> get service sonarqube-test-deploy-service -o jsonpath='{.spec.ports[0].nodePort}'
    ```
    - SonarQube (`http://<hostIP>:<PORT>/account/security` / ID: admin / PW: admin) 접속해 새로운 Token 생성 및 저장
    - SonarQube (`http://<hostIP>:<PORT>/projects/create?mode=manual`) 접속해 `apache-sample-approved` 프로젝트 생성
