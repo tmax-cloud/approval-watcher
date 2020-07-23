@@ -1086,6 +1086,7 @@
     kind: TemplateInstance
     metadata:
       name: apache-cicd-with-approval-instance
+      namespace: <NAMESPACE>
     spec:
       template:
         metadata:
