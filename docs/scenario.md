@@ -715,6 +715,7 @@
     kind: Template
     metadata:
       name: apache-cicd-with-approval
+      namespace: <NAMESPACE>
     plans:
       - name: default
     parameters:
