@@ -7,8 +7,6 @@
 5. `4차 승인` 실제 서비스 환경(`approval-op` 네임스페이스) 배포 승인
 ## 주의사항
 - SonarQube / Mail-sender / Approval-watcher는 모두 같은 네임스페이스 (`approval-system`)에 설치
-- ServiceAccount/RoleBinding/TemplateInstance 생성 시 `<NAMESPACE>` 부분은 모두 PipelineRun이 구동될 Namespace로 치환
-- 마지막 TemplateInstance 생성 시 `<User>=<Email>` 부분은 각각 HyperCloud User Object 이름 및 이메일 주소 입력 (다수 입력 시 한 줄에 한명씩 입력)
 ## 사전 작업
 1. [Mail-sender 설치](https://github.com/cqbqdd11519/mail-notifier/blob/master/docs/installation.md)  
 2. [Approval Watcher 설치](installation.md)
@@ -155,7 +153,8 @@
    - SonarQube (`http://<hostIP>:<PORT>/projects/create?mode=manual`) 접속해 `apache-sample-approved` 프로젝트 생성
 
 ## 시나리오 실행
-1. Namespace/ServiceAccount/Role/RoleBinding 생성
+1. Namespace/ServiceAccount/Role/RoleBinding 생성  
+  (`<NAMESPACE>` 부분은 모두 PipelineRun이 구동될 Namespace로 치환)
    ```yaml
    apiVersion: v1
    kind: Namespace
@@ -1073,7 +1072,11 @@
           timeout: 120h
     ```
 
-4. 템플릿 인스턴스 생성
+4. 템플릿 인스턴스 생성  
+: `<NAMESPACE>` 부분은 모두 PipelineRun이 구동될 Namespace로 치환  
+: `<이미지 레지스트리 주소>` 부분은 이미지 주소 입력 (e.g., `172.22.11.2:30500/apache-sample`)  
+: `<User>=<Email>` 부분은 각각 HyperCloud User Object 이름 및 이메일 주소 입력 (다수 입력 시 한 줄에 한명씩 입력)  
+: `<SonarQube Token>` 부분은 SonarQube 토큰 입력
     ```yaml
     apiVersion: tmax.io/v1
     kind: TemplateInstance
