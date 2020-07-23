@@ -212,7 +212,7 @@
    kind: RoleBinding
    metadata:
      name: approval-rolebinding
-     namespace: approval-op
+     namespace: approval-test
    roleRef:
      apiGroup: rbac.authorization.k8s.io
      kind: ClusterRole
