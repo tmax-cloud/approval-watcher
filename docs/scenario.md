@@ -1,5 +1,19 @@
 # 시나리오 실행 가이드
-(`<NAMESPACE>` 부분은 PipelineRun이 구동될 네임스페이스 이름 입력)
+## 시나리오
+1. 개발자 개발 완료 - PipelineRun 실행 --> SonarQube 통한 코드 정적 분석
+2. `1차 승인` SonarQube 내역 확인 후 소스/이미지 빌드 승인
+3. `2차 승인` 테스트 환경(`approval-test` 네임스페이스)에 배포 승인
+4. `3차 승인` 테스트 환경에서 테스트 완료 승인
+5. `4차 승인` 실제 서비스 환경(`approval-op` 네임스페이스) 배포 승인
+## 주의사항
+- `<NAMESPACE>` 부분은 PipelineRun이 구동될 네임스페이스 이름으로 수정 (수정해야할 부분은 아래와 같음)  
+    - SonarQube TemplateInstance
+    - Mail-sender / Approval-watcher 설치
+    - ServiceAccount/RoleBinding
+    - ClusterTasks
+    - 시나리오 TemplateInstance
+- SonarQube / Mail-sender / Approval-watcher는 모두 같은 네임스페이스에 설치
+- `<User>=<Email>` 부분은 각각 HyperCloud User Object 이름 및 이메일 주소 입력 (다수 입력 시 한 줄에 한명씩 입력)
 ## 사전 작업
 1. SonarQube 설치
    ```yaml
@@ -141,8 +155,9 @@
    kubectl -n <NAMESPACE> get service sonarqube-test-deploy-service -o jsonpath='{.spec.ports[0].nodePort}'
    ```
    - SonarQube (`http://<hostIP>:<PORT>/account/security` / ID: admin / PW: admin) 접속해 새로운 Token 생성 및 저장
+   - SonarQube (`http://<hostIP>:<PORT>/projects/create?mode=manual`) 접속해 `apache-sample-approved` 프로젝트 생성
    
-2. [Mail-sender 설치](https://github.com/cqbqdd11519/mail-notifier/blob/master/docs/installation.md)
+2. [Mail-sender 설치](https://github.com/cqbqdd11519/mail-notifier/blob/master/docs/installation.md)  
 3. [Approval Watcher 설치](installation.md)
 
 ## 시나리오 실행
@@ -226,12 +241,478 @@
      namespace: <NAMESPACE>
    ```
 2. Task 생성
-    ```bash
-    kubectl apply --filename https://raw.githubusercontent.com/tmax-cloud/approval-watcher/master/example/pipeline/1st-task-general.yaml
-    kubectl apply --filename https://raw.githubusercontent.com/tmax-cloud/approval-watcher/master/example/pipeline/2nd-task.yaml
-    kubectl apply --filename https://raw.githubusercontent.com/tmax-cloud/approval-watcher/master/example/pipeline/3rd-task.yaml
-    kubectl apply --filename https://raw.githubusercontent.com/tmax-cloud/approval-watcher/master/example/pipeline/4th-task.yaml
-    ```
+   ```yaml
+   apiVersion: tekton.dev/v1alpha1
+   kind: ClusterTask
+   metadata:
+     name: sonar-scan
+   spec:
+     description: Sonar scan task
+     params:
+       - name: SONAR_URL
+         description: Sonar Qube server URL
+       - name: SONAR_TOKEN
+         description: Token for sonar qube
+       - name: SONAR_PROJECT_ID
+         description: Project ID in sonar qube
+     resources:
+       inputs:
+         - name: source
+           type: git
+     results:
+       - name: project-id
+         description: Project ID for sonar qube
+       - name: sonar-webhook-result
+         description: webhook result from sonarqube
+       - name: sonar-webhook-key
+         description: webhook key
+     steps:
+       - name: pre
+         image: tmaxcloudck/sonar-client:0.0.1
+         imagePullPolicy: Always
+         command:
+           - node
+           - --unhandled-rejections=strict
+           - /client/index.js
+           - pre
+         env:
+           - name: SONAR_URL
+             value: $(params.SONAR_URL)
+           - name: SONAR_TOKEN
+             value: $(params.SONAR_TOKEN)
+           - name: SONAR_PROJECT_ID
+             value: $(params.SONAR_PROJECT_ID)
+           - name: SONAR_PROJECT_ID_FILE
+             value: $(results.project-id.path)
+           - name: SONAR_WEBHOOK_KEY_FILE
+             value: $(results.sonar-webhook-key.path)
+       - name: build-and-scan
+         image: sonarsource/sonar-scanner-cli:4.4
+         imagePullPolicy: Always
+         script: |
+           sonar-scanner -Dsonar.host.url=$(params.SONAR_URL) -Dsonar.login=$(params.SONAR_TOKEN) -Dsonar.projectKey=$(cat $(results.project-id.path))
+         workingDir: /workspace/source
+       - name: post
+         image: tmaxcloudck/sonar-client:0.0.1
+         imagePullPolicy: Always
+         command:
+           - node
+           - --unhandled-rejections=strict
+           - /client/index.js
+           - post
+         env:
+           - name: SONAR_URL
+             value: $(params.SONAR_URL)
+           - name: SONAR_TOKEN
+             value: $(params.SONAR_TOKEN)
+           - name: SONAR_RESULT_FILE
+             value: /webhook-result/result.json
+           - name: SONAR_WEBHOOK_KEY_FILE
+             value: $(results.sonar-webhook-key.path)
+         volumeMounts:
+           - name: webhook-result
+             mountPath: /webhook-result
+     sidecars:
+       - name: webhook
+         image: tmaxcloudck/sonar-client:0.0.1
+         imagePullPolicy: Always
+         command:
+           - node
+           - /client/index.js
+           - webhook
+         env:
+           - name: SONAR_RESULT_FILE
+             value: /webhook-result/result.json
+           - name: SONAR_RESULT_DEST
+             value: $(results.sonar-webhook-result.path)
+         volumeMounts:
+           - name: webhook-result
+             mountPath: /webhook-result
+     volumes:
+       - name: webhook-result
+         emptyDir: {}
+   ```
+   ```yaml
+   apiVersion: tekton.dev/v1alpha1
+   kind: ClusterTask
+   metadata:
+     name: s2i-with-approval
+   spec:
+     description: S2I Task
+     params:
+     - description: The location of the s2i builder image.
+       name: BUILDER_IMAGE
+     - default: .
+       description: The location of the path to run s2i from.
+       name: PATH_CONTEXT
+     - name: REGISTRY_SECRET_NAME
+       description: Docker registry secret (kubernetes.io/dockerconfigjson type)
+       default: ''
+     - default: 'false'
+       description: Verify the TLS on the registry endpoint (for push/pull to a non-TLS registry)
+       name: TLSVERIFY
+     - name: LOGLEVEL
+       description: Log level when running the S2I binary
+       default: '0'
+     - name: PACKAGE_SERVER_URL
+       description: URL (including protocol, ip, port, and path) of private package server (e.g., devpi, pypi, verdaccio, ...)
+       default: ''
+     - name: CM_APPROVER_DEV
+     - name: MAIL_TITLE
+     - name: MAIL_CONTENT
+     resources:
+       inputs:
+       - name: source
+         type: git
+       outputs:
+       - name: image
+         type: image
+     results:
+     - name: image-url
+       description: Tag-updated image url
+     - name: registry-cred
+       description: Tag-updated image url
+     steps:
+       - name: send-mail
+         image: tmaxcloudck/mail-sender-client:latest
+         imagePullPolicy: Always
+         env:
+         - name: MAIL_SERVER
+           value: http://mail-sender.<NAMESPACE>:9999/
+         - name: MAIL_FROM
+           value: no-reply-tc@tmax.co.kr
+         - name: MAIL_SUBJECT
+           value: $(params.MAIL_TITLE)
+         - name: MAIL_CONTENT
+           value: $(params.MAIL_CONTENT)
+         volumeMounts:
+         - name: approver-list-dev
+           mountPath: /tmp/config
+       - name: approval-1
+         image: tmaxcloudck/approval-step-server:latest
+         imagePullPolicy: Always
+         volumeMounts:
+         - name: approver-list-dev
+           mountPath: /tmp/config
+       - name: update-image-url
+         image: tmaxcloudck/cicd-util:1.0.1
+         script: |
+           #!/bin/bash
+           GIT_DIR="/workspace/source"
+           ORIGINAL_URL="$(outputs.resources.image.url)"
+           TARGET_FILE="$(results.image-url.path)"
+           [ $(echo $ORIGINAL_URL | awk -F '/' '{printf $NF}' | awk -F ':' '{printf "%d", split($0,a)}') -eq 1 ] && TAG=":"$(git --git-dir=$GIT_DIR/.git rev-parse --short HEAD)
+           echo "$ORIGINAL_URL$TAG" | tee $TARGET_FILE
+       - name: parse-registry-cred
+         image: tmaxcloudck/cicd-util:1.0.1
+         script: |
+           #!/bin/bash
+           FILENAME="$(results.registry-cred.path)"
+           if [ "$(params.REGISTRY_SECRET_NAME)" != "" ]; then
+               IMAGE_URL=$(cat $(results.image-url.path))
+               URL_ARR=(${IMAGE_URL//\// })
+               REGISTRY=${URL_ARR[0]}
+               NAMESPACE=$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)
+               ENCODED_CFG=$(kubectl -n $NAMESPACE get secrets $(params.REGISTRY_SECRET_NAME) -o jsonpath='{.data.\.dockerconfigjson}')
+               if [ $(( $? + 0 )) -eq 0 ]; then
+                   CRED=$(echo $ENCODED_CFG | base64 -d | jq -r '.auths."'$REGISTRY'".auth' --raw-output -c)
+                   if [ "$CRED" == "null" ]; then
+                     CRED=""
+                   fi
+                   echo $CRED | tee $FILENAME
+               else
+                   touch $FILENAME
+               fi
+           else
+               touch $FILENAME
+           fi
+       - name: generate
+         image: quay.io/openshift-pipeline/s2i:nightly
+         script: |
+           #!/bin/sh
+           set -ex
+           FILENAME=s2i.env
+           touch $FILENAME
+           if [ "$(inputs.params.PACKAGE_SERVER_URL)" != "" ]; then
+             case "$(inputs.params.BUILDER_IMAGE)" in
+               *python*) echo "PIP_INDEX_URL=$(inputs.params.PACKAGE_SERVER_URL)" >> $FILENAME
+                         echo "PIP_TRUSTED_HOST=*" >> $FILENAME ;;
+               *django*) echo "PIP_INDEX_URL=$(inputs.params.PACKAGE_SERVER_URL)" >> $FILENAME
+                         echo "PIP_TRUSTED_HOST=*" >> $FILENAME ;;
+               *nodejs*) echo "NPM_CONFIG_REGISTRY=$(inputs.params.PACKAGE_SERVER_URL)" >> $FILENAME;;
+               *tomcat*) echo "MVN_CENTRAL_URL=$(inputs.params.PACKAGE_SERVER_URL)" >> $FILENAME;;
+               *wildfly*) echo "MVN_CENTRAL_URL=$(inputs.params.PACKAGE_SERVER_URL)" >> $FILENAME;;
+               *jeus*) echo "MVN_CENTRAL_URL=$(inputs.params.PACKAGE_SERVER_URL)" >> $FILENAME;;
+             esac
+           fi
+           /usr/local/bin/s2i \
+           --loglevel=$(inputs.params.LOGLEVEL) \
+           -E $FILENAME \
+           build $(inputs.params.PATH_CONTEXT) $(inputs.params.BUILDER_IMAGE) \
+           --as-dockerfile /gen-source/Dockerfile.gen
+         volumeMounts:
+           - mountPath: /gen-source
+             name: gen-source
+         workingdir: /workspace/source
+       - name: build
+         image: quay.io/buildah/stable
+         script: |
+           buildah \
+           bud \
+           --format \
+           docker \
+           --tls-verify=$(inputs.params.TLSVERIFY) \
+           --storage-driver=vfs \
+           --layers \
+           -f \
+           /gen-source/Dockerfile.gen \
+           -t \
+           $(cat $(results.image-url.path)) \
+           .
+         securityContext:
+           privileged: true
+         volumeMounts:
+           - mountPath: /var/lib/containers
+             name: varlibcontainers
+           - mountPath: /gen-source
+             name: gen-source
+         workingdir: /gen-source
+       - name: push
+         image: quay.io/buildah/stable
+         script: |
+           #!/bin/bash
+           IMAGE_URL=$(cat $(results.image-url.path))
+           REG_CRED=$(cat $(results.registry-cred.path) | base64 -d)
+           if [ "$REG_CRED" != "" ]; then
+               CRED="--creds=$REG_CRED"
+           fi
+           buildah \
+           push \
+           --tls-verify=$(inputs.params.TLSVERIFY) \
+           --storage-driver=vfs \
+           $CRED \
+           $IMAGE_URL \
+           docker://$IMAGE_URL
+         securityContext:
+           privileged: true
+         volumeMounts:
+           - mountPath: /var/lib/containers
+             name: varlibcontainers
+     volumes:
+       - emptyDir: {}
+         name: varlibcontainers
+       - emptyDir: {}
+         name: gen-source
+       - name: approver-list-dev
+         configMap:
+           name: $(params.CM_APPROVER_DEV)
+   
+   ```
+   ```yaml
+   apiVersion: tekton.dev/v1alpha1
+   kind: ClusterTask
+   metadata:
+     name: third-task
+   spec:
+     params:
+     - name: third-user-1
+       description: configmap name which contains users name
+     - name: third-user-2
+       description: configmap name which contains users name
+     - name: mail-title-1
+       default: "[배포 승인 요청] App 배포 승인 요청"
+     - name: mail-content-1
+       default: |
+               namespace 환경에 QA 배포 예정
+               승인이 필요합니다.
+     - name: mail-title-2
+       default: "[배포 확인 요청] 테스트 후 승인 요청"
+     - name: mail-content-2
+       default: |
+               namespace 환경에 QA 배포 완료
+               테스트 후 승인이 필요합니다.
+     - name: app-name
+       description: Deployment name
+     - name: image-url
+       description: Updated image url:tag
+       default: $(inputs.resources.image.url)
+     - name: deploy-namespace
+       description: namespace to deploy deployment
+     - name: deploy-cfg-name
+       description: Deployment configmap name
+       default: ""
+     - name: deploy-env-json
+       description: Deployment environment variable in JSON object form
+       default: "{}"
+     resources:
+       inputs:
+       - name: image
+         type: image
+     steps:
+     - name: email-1
+       image: tmaxcloudck/mail-sender-client:latest
+       env:
+       - name: MAIL_SERVER
+         value: http://mail-sender.<NAMESPACE>:9999/
+       - name: MAIL_FROM
+         value: no-reply-tc@tmax.co.kr
+       - name: MAIL_SUBJECT
+         value: $(params.mail-title-1)
+       - name: MAIL_CONTENT
+         value: $(params.mail-content-1)
+       volumeMounts:
+       - name: approver-list-1
+         mountPath: /tmp/config
+     - name: approval-1
+       image: tmaxcloudck/approval-step-server:latest
+       imagePullPolicy: Always
+       volumeMounts:
+       - name: approver-list-1
+         mountPath: /tmp/config
+     - name: create-yaml
+       image: tmaxcloudck/cicd-util:1.0.1
+       imagePullPolicy: Always
+       command:
+       - "make-deployment"
+       args:
+       - $(params.app-name)
+       - $(params.image-url)
+       volumeMounts:
+       - mountPath: /generate
+         name: generate
+       env:
+       - name: CONFIGMAP_NAME
+         value: $(params.deploy-cfg-name)
+       - name: DEPLOY_ENV_JSON
+         value: $(params.deploy-env-json)
+     - name: run-kubectl
+       image: tmaxcloudck/cicd-util:1.0.1
+       command:
+       - "kubectl"
+       args:
+       - apply
+       - -f
+       - /generate/deployment.yaml
+       - -n
+       - $(params.deploy-namespace)
+       volumeMounts:
+       - mountPath: /generate
+         name: generate
+     - name: email-2
+       image: tmaxcloudck/mail-sender-client:latest
+       env:
+       - name: MAIL_SERVER
+         value: http://mail-sender.<NAMESPACE>:9999/
+       - name: MAIL_FROM
+         value: no-reply-tc@tmax.co.kr
+       - name: MAIL_SUBJECT
+         value: $(params.mail-title-2)
+       - name: MAIL_CONTENT
+         value: $(params.mail-content-2)
+       volumeMounts:
+       - name: approver-list-2
+         mountPath: /tmp/config
+     - name: approval-2
+       image: tmaxcloudck/approval-step-server:latest
+       imagePullPolicy: Always
+       volumeMounts:
+       - name: approver-list-2
+         mountPath: /tmp/config
+     volumes:
+     - name: approver-list-1
+       configmap:
+         name: $(params.third-user-1)
+     - name: approver-list-2
+       configmap:
+         name: $(params.third-user-2)
+     - name: generate
+       emptyDir: {}
+   ```
+   ```yaml
+   apiVersion: tekton.dev/v1alpha1
+   kind: ClusterTask
+   metadata:
+     name: forth-task
+   spec:
+     params:
+     - name: forth-user-1
+       description: configmap name which contains users name
+     - name: mail-title-1
+     - name: mail-content-1
+     - name: app-name
+       description: Deployment name
+     - name: image-url
+       description: Updated image url:tag
+       default: $(inputs.resources.image.url)
+     - name: deploy-namespace
+       description: namespace to deploy deployment
+     - name: deploy-cfg-name
+       description: Deployment configmap name
+       default: ""
+     - name: deploy-env-json
+       description: Deployment environment variable in JSON object form
+       default: "{}"
+     resources:
+       inputs:
+       - name: image
+         type: image
+     steps:
+     - name: email-1
+       image: tmaxcloudck/mail-sender-client:latest
+       env:
+       - name: MAIL_SERVER
+         value: http://mail-sender.<NAMESPACE>:9999/
+       - name: MAIL_FROM
+         value: no-reply-tc@tmax.co.kr
+       - name: MAIL_SUBJECT
+         value: $(params.mail-title-1)
+       - name: MAIL_CONTENT
+         value: $(params.mail-content-1)
+       volumeMounts:
+       - name: approver-list-1
+         mountPath: /tmp/config
+     - name: approval-1
+       image: tmaxcloudck/approval-step-server:latest
+       imagePullPolicy: Always
+       volumeMounts:
+       - name: approver-list-1
+         mountPath: /tmp/config
+     - name: create-yaml
+       image: tmaxcloudck/cicd-util:1.0.1
+       imagePullPolicy: Always
+       command:
+       - "make-deployment"
+       args:
+       - $(params.app-name)
+       - $(params.image-url)
+       volumeMounts:
+       - mountPath: /generate
+         name: generate
+       env:
+       - name: CONFIGMAP_NAME
+         value: $(params.deploy-cfg-name)
+       - name: DEPLOY_ENV_JSON
+         value: $(params.deploy-env-json)
+     - name: run-kubectl
+       image: tmaxcloudck/cicd-util:1.0.1
+       command:
+       - "kubectl"
+       args:
+       - apply
+       - -f
+       - /generate/deployment.yaml
+       - -n
+       - $(params.deploy-namespace)
+       volumeMounts:
+       - mountPath: /generate
+         name: generate
+     volumes:
+     - name: approver-list-1
+       configmap:
+         name: $(params.forth-user-1)
+     - name: generate
+       emptyDir: {}
+   ```
 3. 템플릿 생성
     ```yaml
     apiVersion: tmax.io/v1
@@ -612,7 +1093,7 @@
           - name: APP_NAME
             value: apache-sample
           - name: NAMESPACE
-            value: ck2-2
+            value: <NAMESPACE>
           - name: NAMESPACE_TEST
             value: approval-test
           - name: NAMESPACE_OP
@@ -622,9 +1103,9 @@
           - name: GIT_REV
             value: master
           - name: IMAGE_URL
-            value: 192.168.6.224:443/apache-approved-sample
+            value: <이미지 레지스트리 주소>
           - name: REGISTRY_SECRET_NAME
-            value: hpcd-registry-cicd-test
+            value: ''
           - name: SERVICE_ACCOUNT_NAME
             value: approval-sa
           - name: WAS_PORT
@@ -636,9 +1117,9 @@
           - name: DEPLOY_ENV_JSON
             value: '{}'
           - name: SONAR_URL
-            value: http://192.168.6.200:32366/
+            value: http://<SONAR-NodeIP>:<SONAR-NodePort>/
           - name: SONAR_TOKEN
-            value: 61eaa750227bcf5dbceadd2646bb7686f7e1c65a
+            value: <SonarQube Token>
           - name: SONAR_PROJECT_ID
             value: apache-sample-approved
           - name: APPROVER_LIST_DEV
