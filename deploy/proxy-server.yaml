@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: approval-proxy-server
-  namespace: default
+  namespace: approval-system
 spec:
   selector:
     matchLabels:
