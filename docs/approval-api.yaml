@@ -80,7 +80,7 @@ paths:
     get:
       tags:
       - approval
-      summary: Accept(or reject) the step
+      summary: Get list of approvals in the namespace
       parameters:
       - $ref: '#/components/parameters/tokenParam'
       - in: "path"
@@ -132,17 +132,85 @@ paths:
                 }
         '401':
           description: Unauthorized
-          
-  /api/kubernetes/apis/tmax.io/v1/namespaces/{namespace}/approvals/{approval-name}:
-    get:
+    delete:
       tags:
       - approval
-      summary: Accept(or reject) the step
+      summary: Delete list of approvals in the namespace
       parameters:
       - $ref: '#/components/parameters/tokenParam'
       - in: "path"
         name: namespace
         description: namespace of approval CR
+        required: true
+        schema:
+          type: "string"
+      - in: "query"
+        name: labelSelector
+        description: filter by user id
+        required: false
+        schema:
+          type: "string"
+      responses:
+        '200':
+          description: Return approval list
+          content:
+            application/json:
+              schema:
+                example: {
+                 "apiVersion":"tmax.io/v1",
+                 "items":[
+                    {
+                       "apiVersion":"tmax.io/v1",
+                       "kind":"Approval",
+                       "metadata":{
+                          "labels":{
+                             "jaewon-tmax.co.kr":""
+                          },
+                          "name":"third-task-run-pod-abc-1",
+                          "namespace":"default",
+                       },
+                       "spec":{
+                          "podName":"third-task-run-pod-bsntl",
+                          "users":[
+                             "admin-tmax.co.kr"
+                          ]
+                       }
+                    },
+                    {
+                       "apiVersion":"tmax.io/v1",
+                       "kind":"Approval",
+                       "metadata":{
+                          "labels":{
+                             "admin-tmax.co.kr":""
+                          },
+                          "name":"third-task-run-pod-bsn-1",
+                          "namespace":"default",
+                       },
+                       "spec":{
+                          "podName":"third-task-run-pod-bsntl",
+                          "users":[
+                             "admin-tmax.co.kr"
+                          ]
+                       }
+                    }
+                 ],
+                 "kind":"ApprovalList",
+                 "metadata":{
+                    "continue":"",
+                    "resourceVersion":"121582117",
+                    "selfLink":"/apis/tmax.io/v1/namespaces/default/approvals/"
+                 }
+              }
+  /api/kubernetes/apis/tmax.io/v1/namespaces/{namespace}/approvals/{approval-name}:
+    get:
+      tags:
+      - approval
+      summary: Get an approval resource
+      parameters:
+      - $ref: '#/components/parameters/tokenParam'
+      - in: "path"
+        name: namespace
+        description: namespace of an approval CR
         required: true
         schema:
           type: "string"
@@ -154,7 +222,7 @@ paths:
           type: "string"
       responses:
         '200':
-          description: Return approval list
+          description: Return the approval
           content:
             application/json:
               schema:
@@ -179,6 +247,44 @@ paths:
                    "result": "Rejected"
                  }
               }
+    delete:
+      tags:
+      - approval
+      summary: Delete an approval resource
+      parameters:
+      - $ref: '#/components/parameters/tokenParam'
+      - in: "path"
+        name: namespace
+        description: namespace of approval CR
+        required: true
+        schema:
+          type: "string"
+      - in: "path"
+        name: approval-name
+        description: name of approval you want to find
+        required: true
+        schema:
+          type: "string"
+      responses:
+        '200':
+          description: Return approval brief info
+          content:
+            application/json:
+              schema:
+                example: {
+                  "kind": "Status",
+                  "apiVersion": "v1",
+                  "metadata": {
+                
+                  },
+                  "status": "Success",
+                  "details": {
+                    "name": "third-task-run-pod-rts-1",
+                    "group": "tmax.io",
+                    "kind": "approvals",
+                    "uid": "2c8e4028-9e80-4fae-b949-aa365d3018f5"
+                  }
+                }
 components:
   parameters: # common parameters
     tokenParam:
