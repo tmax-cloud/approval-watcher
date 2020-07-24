@@ -5,7 +5,7 @@ metadata:
 subjects:
 - kind: ServiceAccount
   name: approval-watcher
-  namespace: default
+  namespace: approval-system
 roleRef:
   kind: ClusterRole
   name: approval-watcher
