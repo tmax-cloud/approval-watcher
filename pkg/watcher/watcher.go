@@ -151,9 +151,16 @@ func handleApprovalStepStarted(pod *corev1.Pod, cont *corev1.Container) {
 		}
 		//TODO - refactor USERS func
 		scanner := bufio.NewScanner(strings.NewReader(usersString))
+		// Parse line-separated
 		for scanner.Scan() {
-			user := strings.Split(scanner.Text(), "=")
-			users = append(users, user[0])
+			// Parse comma-separated
+			userList := strings.Split(scanner.Text(), ",")
+			for i := range userList {
+				userList[i] = strings.TrimSpace(userList[i])
+
+				user := strings.Split(userList[i], "=")
+				users = append(users, user[0])
+			}
 		}
 		if err := scanner.Err(); err != nil {
 			log.Error(err, fmt.Sprintf("cannot process users list %s", usersString))

@@ -16,9 +16,16 @@ func Users(cmPath string) (map[string]string, error) {
 
 	users := make(map[string]string)
 	scanner := bufio.NewScanner(file)
+	// Parse line-separated
 	for scanner.Scan() {
-		user := strings.Split(scanner.Text(), "=")
-		users[user[0]] = user[1]
+		// Parse comma-separated
+		userList := strings.Split(scanner.Text(), ",")
+		for i := range userList {
+			userList[i] = strings.TrimSpace(userList[i])
+
+			user := strings.Split(userList[i], "=")
+			users[user[0]] = user[1]
+		}
 	}
 
 	if err := scanner.Err(); err != nil {
