@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"sync"
 
 	"github.com/gorilla/mux"
 	corev1 "k8s.io/api/core/v1"
@@ -27,6 +28,7 @@ const (
 )
 
 var log = logf.Log.WithName("approve-server")
+var reqMap sync.Map
 
 func LaunchServer(port int, path string, _ chan bool) {
 	router := mux.NewRouter()
@@ -120,9 +122,18 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	}
 	sendReq.Header.Set("Authorization", auth)
 
+	// Check if there is any ongoing request
+	_, exist := reqMap.Load(approvalName)
+	if exist {
+		respondError(w, http.StatusBadRequest, fmt.Sprintf("approval %s is still in approval/reject progress", approvalName))
+		return
+	}
+
 	log.Info(fmt.Sprintf("Sending request to %s", addr))
 
+	reqMap.Store(approvalName, sendReq)
 	sendResp, err := sendClient.Do(sendReq)
+	reqMap.Delete(approvalName)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err.Error())
 		return
