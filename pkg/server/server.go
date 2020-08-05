@@ -123,24 +123,34 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	sendReq.Header.Set("Authorization", auth)
 
 	// Check if there is any ongoing request
-	_, exist := reqMap.Load(approvalName)
+	_, exist := reqMap.LoadOrStore(approvalName, sendReq)
+	defer reqMap.Delete(approvalName)
 	if exist {
-		respondError(w, http.StatusBadRequest, fmt.Sprintf("approval %s is still in approval/reject progress", approvalName))
+		w.WriteHeader(http.StatusAccepted)
+		resp := &watcher.Response{
+			Result:  true,
+			Message: fmt.Sprintf("approval %s is still in approval/reject progress", approvalName),
+		}
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			log.Error(err, "cannot return response")
+		}
 		return
 	}
 
 	log.Info(fmt.Sprintf("Sending request to %s", addr))
 
-	reqMap.Store(approvalName, sendReq)
 	sendResp, err := sendClient.Do(sendReq)
-	reqMap.Delete(approvalName)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	defer sendResp.Body.Close()
-	if sendResp.StatusCode != http.StatusOK {
+	if sendResp.StatusCode == http.StatusOK {
+		if err := internal.UpdateApproval(c, types.NamespacedName{Name: approval.Name, Namespace: approval.Namespace}, tmaxv1.Result(req.Decision)); err != nil {
+			respondError(w, http.StatusInternalServerError, err.Error())
+		}
+	} else {
 		respObj := &watcher.Response{}
 		dec := json.NewDecoder(sendResp.Body)
 		if err := dec.Decode(respObj); err != nil {

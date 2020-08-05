@@ -106,12 +106,6 @@ func handlePodEvent(pod *corev1.Pod) {
 				handleApprovalStepStarted(pod, &cont)
 				return
 			}
-		} else if state == PodStateTerminated {
-			// Terminated state - check if it is finished now!
-			// If it is the last step, or next step is running, Approval step is terminated
-			// Bug?? Current/Next step is in Terminated state... right after the approval step ends
-			//       just update Approval whenever the current step is in terminated status
-			handleApprovalStepFinished(pod, &cont)
 		}
 	}
 }
@@ -172,34 +166,6 @@ func handleApprovalStepStarted(pod *corev1.Pod, cont *corev1.Container) {
 		}
 	} else if err != nil {
 		log.Error(err, "error while getting approval")
-	}
-}
-
-// Executed when approval step is ended
-func handleApprovalStepFinished(pod *corev1.Pod, cont *corev1.Container) {
-	log.Info("Approval step is finished...")
-	contStatus := getContainerStatus(pod, cont)
-	if contStatus.State.Terminated == nil {
-		log.Error(fmt.Errorf("approval step is in wrong state (expecting %s)", string(PodStateTerminated)), "cannot get container status")
-		return
-	}
-
-	exitCode := contStatus.State.Terminated.ExitCode
-
-	var result tmaxv1.Result
-	if exitCode == 0 {
-		result = tmaxv1.ResultApproved
-	} else {
-		result = tmaxv1.ResultRejected
-	}
-	name, err := generateApprovalName(pod, cont)
-	if err != nil {
-		log.Error(err, "cannot generate approval name")
-		return
-	}
-	if err := internal.UpdateApproval(k8sClient, name, result); err != nil {
-		log.Error(err, "cannot update approval")
-		return
 	}
 }
 
