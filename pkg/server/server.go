@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"sync"
 
 	"github.com/gorilla/mux"
 	corev1 "k8s.io/api/core/v1"
@@ -27,6 +28,7 @@ const (
 )
 
 var log = logf.Log.WithName("approve-server")
+var reqMap sync.Map
 
 func LaunchServer(port int, path string, _ chan bool) {
 	router := mux.NewRouter()
@@ -120,6 +122,21 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	}
 	sendReq.Header.Set("Authorization", auth)
 
+	// Check if there is any ongoing request
+	_, exist := reqMap.LoadOrStore(approvalName, sendReq)
+	defer reqMap.Delete(approvalName)
+	if exist {
+		w.WriteHeader(http.StatusAccepted)
+		resp := &watcher.Response{
+			Result:  true,
+			Message: fmt.Sprintf("approval %s is still in approval/reject progress", approvalName),
+		}
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			log.Error(err, "cannot return response")
+		}
+		return
+	}
+
 	log.Info(fmt.Sprintf("Sending request to %s", addr))
 
 	sendResp, err := sendClient.Do(sendReq)
@@ -129,7 +146,11 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	defer sendResp.Body.Close()
-	if sendResp.StatusCode != http.StatusOK {
+	if sendResp.StatusCode == http.StatusOK {
+		if err := internal.UpdateApproval(c, types.NamespacedName{Name: approval.Name, Namespace: approval.Namespace}, tmaxv1.Result(req.Decision)); err != nil {
+			respondError(w, http.StatusInternalServerError, err.Error())
+		}
+	} else {
 		respObj := &watcher.Response{}
 		dec := json.NewDecoder(sendResp.Body)
 		if err := dec.Decode(respObj); err != nil {
