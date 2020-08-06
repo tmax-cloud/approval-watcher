@@ -101,8 +101,14 @@ func handlePodEvent(pod *corev1.Pod) {
 
 		if state == PodStateRunning {
 			// Running state - check if it is launched now!
-			// If it is the first step, or previous step is terminated, Approval step is running
-			if i == 0 || getStepState(pod, &pod.Spec.Containers[i-1]) == PodStateTerminated {
+			// If it is the first step, or previous step is terminated with exit code 0, Approval step is running
+			hasStepStarted := i == 0
+			if !hasStepStarted {
+				prevStatus := getContainerStatus(pod, &pod.Spec.Containers[i-1])
+				hasStepStarted = prevStatus.State.Terminated != nil && prevStatus.State.Terminated.ExitCode == 0
+			}
+
+			if hasStepStarted {
 				handleApprovalStepStarted(pod, &cont)
 				return
 			}
