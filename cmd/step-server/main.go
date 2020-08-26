@@ -41,15 +41,21 @@ func extractToken(r *http.Request) string {
 
 func validateToken(tokenString string) error {
 	claim := &apis.JwtClaim{}
-	token, err := jwt.ParseWithClaims(tokenString, claim, func(token *jwt.Token) (interface{}, error) {
-		return JwtKey, nil
-	})
-
+	_, _, err := new(jwt.Parser).ParseUnverified(tokenString, claim)
 	if err != nil {
-		log.Error(err, fmt.Sprintf("skip an error, token: %s", token))
+		return err
 	}
 
-	if _, ok := users[claim.Id]; !ok {
+	var id string
+	if claim.Id != "" { // Non-keycloak id
+		id = claim.Id
+	} else if claim.KeyCloakId != "" { // Keycloak id
+		id = claim.KeyCloakId
+	} else {
+		return fmt.Errorf("token is malformed, token: %s", tokenString)
+	}
+
+	if _, ok := users[id]; !ok {
 		return errors.New("not an approver in the list")
 	}
 

@@ -43,7 +43,7 @@ spec:
       imagePullPolicy: Always
       env:
       - name: MAIL_SERVER
-        value: http://mail-sender.default:9999/
+        value: http://mail-sender.approval-system:9999/
       - name: MAIL_FROM
         value: no-reply-tc@tmax.co.kr
       - name: MAIL_SUBJECT
