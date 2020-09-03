@@ -1114,7 +1114,8 @@
 4. 템플릿 인스턴스 생성  
 : `<NAMESPACE>` 부분은 모두 PipelineRun이 구동될 Namespace로 치환  
 : `<이미지 레지스트리 주소>` 부분은 이미지 주소 입력 (e.g., `172.22.11.2:30500/apache-sample`)  
-: `<User>=<Email>` 부분은 각각 HyperCloud User Object 이름 및 이메일 주소 입력 (다수 입력 시 한 줄에 한명씩 입력)  
+: `<User>=<Email>` 부분은 각각 HyperCloud User Object 이름 및 이메일 주소 입력 (다수 입력 시 콤마(,)로 구분해 입력)  
+(e.g., admin-tmax.co.kr=admin@tmax.co.kr,qa-tmax.co.kr=qa@tmax.co.kr)  
 : `<SonarQube Token>` 부분은 SonarQube 토큰 입력
     ```yaml
     apiVersion: tmax.io/v1
