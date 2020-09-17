@@ -32,7 +32,7 @@ const (
 
 const (
 	LabelTektonTaskRun     string = "tekton.dev/taskRun"
-	ApprovalStepNamePrefix string = "step-approval-"
+	ApprovalStepNamePrefix string = "step-approve-"
 	ConfigMapKey           string = "users"
 	VolumeMountPath        string = "/tmp/config"
 )
@@ -196,7 +196,11 @@ func containsApprovalStep(pod *corev1.Pod) bool {
 	// Check if needed step exist
 	for _, s := range pod.Spec.Containers {
 		if strings.HasPrefix(s.Name, ApprovalStepNamePrefix) {
-			hasStep = true
+			for _, v := range s.VolumeMounts {
+				if v.MountPath == VolumeMountPath {
+					hasStep = true
+				}
+			}
 		}
 	}
 
