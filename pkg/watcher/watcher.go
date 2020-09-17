@@ -31,10 +31,10 @@ const (
 )
 
 const (
-	LabelTektonTaskRun       string = "tekton.dev/taskRun"
-	ApprovalStepNamePrefix   string = "step-approval-"
-	ApproverVolumeNamePrefix string = "approver-list-"
-	ConfigMapKey             string = "users"
+	LabelTektonTaskRun     string = "tekton.dev/taskRun"
+	ApprovalStepNamePrefix string = "step-approval-"
+	ConfigMapKey           string = "users"
+	VolumeMountPath        string = "/tmp/config"
 )
 
 var k8sClient client.Client
@@ -192,7 +192,6 @@ func handlePodDelete(pod *corev1.Pod, cont *corev1.Container) {
 
 func containsApprovalStep(pod *corev1.Pod) bool {
 	hasStep := false
-	hasVolume := false
 
 	// Check if needed step exist
 	for _, s := range pod.Spec.Containers {
@@ -201,14 +200,7 @@ func containsApprovalStep(pod *corev1.Pod) bool {
 		}
 	}
 
-	// Check if needed volumes exist
-	for _, v := range pod.Spec.Volumes {
-		if strings.HasPrefix(v.Name, ApproverVolumeNamePrefix) {
-			hasVolume = true
-		}
-	}
-
-	return hasStep && hasVolume
+	return hasStep
 }
 
 func getContainerStatus(pod *corev1.Pod, step *corev1.Container) *corev1.ContainerStatus {
@@ -244,13 +236,13 @@ func getStepState(pod *corev1.Pod, step *corev1.Container) PodState {
 func getConfigMapName(pod *corev1.Pod, cont *corev1.Container) (types.NamespacedName, error) {
 	volumeName := ""
 	for _, volumeMount := range cont.VolumeMounts {
-		if strings.HasPrefix(volumeMount.Name, ApproverVolumeNamePrefix) {
+		if volumeMount.MountPath == VolumeMountPath {
 			volumeName = volumeMount.Name
 			break
 		}
 	}
 	if volumeName == "" {
-		return types.NamespacedName{}, fmt.Errorf("no volume mount starting with %s is found", ApproverVolumeNamePrefix)
+		return types.NamespacedName{}, fmt.Errorf("no volume mount with mount path%s is found", VolumeMountPath)
 	}
 
 	for _, volume := range pod.Spec.Volumes {
