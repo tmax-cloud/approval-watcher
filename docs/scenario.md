@@ -398,7 +398,7 @@
          volumeMounts:
          - name: approver-list-dev
            mountPath: /tmp/config
-       - name: approval-1
+       - name: approve-1
          image: tmaxcloudck/approval-step-server:latest
          imagePullPolicy: Always
          volumeMounts:
@@ -573,7 +573,7 @@
        volumeMounts:
        - name: approver-list-1
          mountPath: /tmp/config
-     - name: approval-1
+     - name: approve-1
        image: tmaxcloudck/approval-step-server:latest
        imagePullPolicy: Always
        volumeMounts:
@@ -622,7 +622,7 @@
        volumeMounts:
        - name: approver-list-2
          mountPath: /tmp/config
-     - name: approval-2
+     - name: approve-2
        image: tmaxcloudck/approval-step-server:latest
        imagePullPolicy: Always
        volumeMounts:
@@ -681,7 +681,7 @@
        volumeMounts:
        - name: approver-list-1
          mountPath: /tmp/config
-     - name: approval-1
+     - name: approve-1
        image: tmaxcloudck/approval-step-server:latest
        imagePullPolicy: Always
        volumeMounts:

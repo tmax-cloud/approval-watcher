@@ -15,5 +15,5 @@ spec:
       serviceAccount: approval-watcher
       containers:
         - name: proxy-server
-          image: tmaxcloudck/approval-watcher:0.0.1
+          image: tmaxcloudck/approval-watcher:latest
           imagePullPolicy: Always
