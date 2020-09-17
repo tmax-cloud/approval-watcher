@@ -7,7 +7,7 @@ spec:
   params:
   - name: CM_APPROVER_DEV
   steps:
-  - name: approval-1
+  - name: approve-1
     image: tmaxcloudck/approval-step-server:latest
     imagePullPolicy: Always
     volumeMounts:
