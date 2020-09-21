@@ -5,6 +5,10 @@
 - Approval-watcher server **Deployment/Service**
 - **Role/RoleBinding/ServiceAccount** for watcher server
 
+## Images Required
+* [tmaxcloudck/approval-watcher:0.0.3](https://hub.docker.com/layers/tmaxcloudck/approval-watcher/0.0.3/images/sha256-6f5fd3fbe9f45909954181a9121321bbf13dc5f46724a6ad72bb156754cac2c6?context=explore)
+* [tmaxcloudck/approval-step-server:0.0.3](https://hub.docker.com/layers/tmaxcloudck/approval-step-server/0.0.3/images/sha256-dd1eca762c7009676c2ae41d409ee084e803eefe40581ad95463f20a88bc0a59?context=explore)
+
 ## Procedure
 1. Create Approval CRD
     ```bash
