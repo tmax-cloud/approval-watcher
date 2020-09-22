@@ -42,6 +42,10 @@ var log = logf.Log.WithName("approve-watcher")
 
 func WatchPods(_ chan bool) {
 	cfg, err := config.GetConfig()
+	if err != nil {
+		log.Error(err, "cannot get k8s config")
+		os.Exit(1)
+	}
 	clientSet, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
 		log.Error(err, "cannot get k8s config")
