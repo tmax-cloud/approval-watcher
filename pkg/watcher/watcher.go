@@ -184,7 +184,7 @@ func handlePodDelete(pod *corev1.Pod, cont *corev1.Container) {
 		log.Error(err, "cannot generate approval name")
 		return
 	}
-	if err := internal.UpdateApproval(k8sClient, name, tmaxv1.ResultCanceled); err != nil {
+	if err := internal.UpdateApproval(k8sClient, name, tmaxv1.ResultCanceled, ""); err != nil {
 		log.Error(err, "cannot update approval")
 		return
 	}

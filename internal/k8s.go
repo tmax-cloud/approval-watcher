@@ -61,7 +61,7 @@ func CreateApproval(c client.Client, name types.NamespacedName, pod *corev1.Pod,
 	return nil
 }
 
-func UpdateApproval(c client.Client, name types.NamespacedName, result tmaxv1.Result) error {
+func UpdateApproval(c client.Client, name types.NamespacedName, result tmaxv1.Result, reason string) error {
 	logf.Log.Info("Updating Approval...")
 	approval, err := GetApproval(c, name)
 	if err != nil {
@@ -70,6 +70,7 @@ func UpdateApproval(c client.Client, name types.NamespacedName, result tmaxv1.Re
 
 	if approval.Status.Result == tmaxv1.ResultWaiting || approval.Status.Result == "" {
 		approval.Status.Result = result
+		approval.Status.Reason = reason
 		approval.Status.DecisionTime = metav1.Now()
 		if err := c.Status().Update(context.TODO(), approval); err != nil {
 			return err

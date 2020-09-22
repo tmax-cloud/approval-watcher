@@ -4,6 +4,7 @@ import "github.com/tmax-cloud/approval-watcher/pkg/apis"
 
 type Request struct {
 	Decision apis.DecisionType `json:"decision"`
+	Reason   string            `json:"reason,omitempty"`
 }
 
 type Response struct {

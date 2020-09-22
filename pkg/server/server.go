@@ -147,7 +147,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 	defer sendResp.Body.Close()
 	if sendResp.StatusCode == http.StatusOK {
-		if err := internal.UpdateApproval(c, types.NamespacedName{Name: approval.Name, Namespace: approval.Namespace}, tmaxv1.Result(req.Decision)); err != nil {
+		if err := internal.UpdateApproval(c, types.NamespacedName{Name: approval.Name, Namespace: approval.Namespace}, tmaxv1.Result(req.Decision), req.Reason); err != nil {
 			respondError(w, http.StatusInternalServerError, err.Error())
 		}
 	} else {

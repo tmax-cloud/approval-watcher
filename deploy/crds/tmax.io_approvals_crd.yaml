@@ -45,8 +45,12 @@ spec:
           description: ApprovalSpec defines the desired state of Approval
           properties:
             podName:
+              description: PodName represents the name of the pod to be approved to
+                proceed
               type: string
             users:
+              description: Users are the list of the users who are requested to approve
+                the Approval
               items:
                 type: string
               type: array
@@ -58,9 +62,14 @@ spec:
           description: ApprovalStatus defines the observed state of Approval
           properties:
             decisionTime:
+              description: Decision time of Approval
               format: date-time
               type: string
+            reason:
+              description: Decision message
+              type: string
             result:
+              description: Decision result of Approval
               type: string
           required:
           - result
