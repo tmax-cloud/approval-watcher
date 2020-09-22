@@ -14,27 +14,24 @@ const (
 	ResultCanceled Result = "Canceled"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 // ApprovalSpec defines the desired state of Approval
 type ApprovalSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
-	// Add custom validation using kubebuilder tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html
-
+	// PodName represents the name of the pod to be approved to proceed
 	PodName string `json:"podName"`
 
+	// Users are the list of the users who are requested to approve the Approval
 	Users []string `json:"users"`
 }
 
 // ApprovalStatus defines the observed state of Approval
 type ApprovalStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
-	// Add custom validation using kubebuilder tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html
+	// Decision result of Approval
+	Result Result `json:"result"`
 
-	Result       Result      `json:"result"`
+	// Decision message
+	Reason string `json:"reason,omitempty"`
+
+	// Decision time of Approval
 	DecisionTime metav1.Time `json:"decisionTime,omitempty"`
 }
 
