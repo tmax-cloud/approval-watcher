@@ -30,6 +30,10 @@ const (
 var log = logf.Log.WithName("approve-server")
 var reqMap sync.Map
 
+/*
+	DEPRECATED! - Use extension-api-server (pkg/apiserver)
+	LaunchServer is only reserved for backward-compatibility (should be removed someday)
+*/
 func LaunchServer(port int, path string, _ chan bool) {
 	router := mux.NewRouter()
 

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/tmax-cloud/approval-watcher/pkg/apiserver"
 	"log"
 	"os"
 	"strconv"
@@ -34,7 +35,12 @@ func main() {
 			log.Fatal(err)
 		}
 	}
+	// DEPRECATED : Use api-aggregation
 	go server.LaunchServer(port, server.DefaultPath, stopChan)
+
+	// API-aggregation
+	apiServer := apiserver.New()
+	go apiServer.Start()
 
 	success := <-stopChan
 	if success {

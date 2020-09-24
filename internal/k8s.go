@@ -3,6 +3,8 @@ package internal
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+	"os"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -88,4 +90,31 @@ func GetConfigMap(c client.Client, name types.NamespacedName) (*corev1.ConfigMap
 		return nil, err
 	}
 	return cm, nil
+}
+
+func Namespace() (string, error) {
+	nsPath := "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
+	if FileExists(nsPath) {
+		// Running in k8s cluster
+		nsBytes, err := ioutil.ReadFile(nsPath)
+		if err != nil {
+			return "", fmt.Errorf("could not read file %s", nsPath)
+		}
+		return string(nsBytes), nil
+	} else {
+		// Not running in k8s cluster (may be running locally)
+		ns := os.Getenv("NAMESPACE")
+		if ns == "" {
+			ns = "default"
+		}
+		return ns, nil
+	}
+}
+
+func ApiServiceName() string {
+	svcName := os.Getenv("API_SERVICE_NAME")
+	if svcName == "" {
+		svcName = ServiceName
+	}
+	return svcName
 }

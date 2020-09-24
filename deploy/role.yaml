@@ -27,3 +27,19 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - apiregistration.k8s.io
+  resourceNames:
+  - v1.approval.tmax.io
+  resources:
+  - apiservices
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - authorization.k8s.io
+  resources:
+  - subjectaccessreviews
+  verbs:
+  - create

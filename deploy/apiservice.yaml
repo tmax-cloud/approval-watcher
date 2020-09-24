@@ -1,0 +1,13 @@
+apiVersion: apiregistration.k8s.io/v1
+kind: APIService
+metadata:
+  name: v1.approval.tmax.io
+spec:
+  group: approval.tmax.io
+  groupPriorityMinimum: 100
+  service:
+    name: approval-proxy-server
+    namespace: approval-system
+    port: 443
+  version: v1
+  versionPriority: 100

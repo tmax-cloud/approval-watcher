@@ -44,3 +44,11 @@ func GenerateUserLabel(list []string) map[string]string {
 
 	return result
 }
+
+func FileExists(path string) bool {
+	info, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return !info.IsDir()
+}
