@@ -405,7 +405,7 @@
          - name: approver-list-dev
            mountPath: /tmp/config
        - name: update-image-url
-         image: tmaxcloudck/cicd-util:1.1.4
+         image: tmaxcloudck/cicd-util:1.0.2
          script: |
            #!/bin/bash
            GIT_DIR="/workspace/source"
@@ -414,7 +414,7 @@
            [ $(echo $ORIGINAL_URL | awk -F '/' '{printf $NF}' | awk -F ':' '{printf "%d", split($0,a)}') -eq 1 ] && TAG=":"$(git --git-dir=$GIT_DIR/.git rev-parse --short HEAD)
            echo "$ORIGINAL_URL$TAG" | tee $TARGET_FILE
        - name: parse-registry-cred
-         image: tmaxcloudck/cicd-util:1.1.4
+         image: tmaxcloudck/cicd-util:1.0.2
          script: |
            #!/bin/bash
            FILENAME="$(results.registry-cred.path)"
@@ -580,7 +580,7 @@
        - name: approver-list-1
          mountPath: /tmp/config
      - name: create-yaml
-       image: tmaxcloudck/cicd-util:1.1.4
+       image: tmaxcloudck/cicd-util:1.0.2
        imagePullPolicy: Always
        command:
        - "make-deployment"
@@ -596,7 +596,7 @@
        - name: DEPLOY_ENV_JSON
          value: $(params.deploy-env-json)
      - name: run-kubectl
-       image: tmaxcloudck/cicd-util:1.1.4
+       image: tmaxcloudck/cicd-util:1.0.2
        command:
        - "kubectl"
        args:
@@ -688,7 +688,7 @@
        - name: approver-list-1
          mountPath: /tmp/config
      - name: create-yaml
-       image: tmaxcloudck/cicd-util:1.1.4
+       image: tmaxcloudck/cicd-util:1.0.2
        imagePullPolicy: Always
        command:
        - "make-deployment"
@@ -704,7 +704,7 @@
        - name: DEPLOY_ENV_JSON
          value: $(params.deploy-env-json)
      - name: run-kubectl
-       image: tmaxcloudck/cicd-util:1.1.4
+       image: tmaxcloudck/cicd-util:1.0.2
        command:
        - "kubectl"
        args:
