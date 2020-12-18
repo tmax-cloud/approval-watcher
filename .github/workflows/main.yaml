@@ -16,7 +16,7 @@ jobs:
           export SDK_PATH=/opt/operator-sdk
           export PATH=$PATH:$SDK_PATH
           mkdir -p $SDK_PATH
-          wget https://github.com/operator-framework/operator-sdk/releases/download/v0.17.1/operator-sdk-v0.17.1-x86_64-linux-gnu -O $SDK_PATH/operator-sdk
+          wget -q https://github.com/operator-framework/operator-sdk/releases/download/v0.17.1/operator-sdk-v0.17.1-x86_64-linux-gnu -O $SDK_PATH/operator-sdk
           chmod +x $SDK_PATH/operator-sdk
           make test-gen
   test_verify:
@@ -50,7 +50,7 @@ jobs:
           export SDK_PATH=/opt/operator-sdk
           export PATH=$PATH:$SDK_PATH
           mkdir -p $SDK_PATH
-          wget https://github.com/operator-framework/operator-sdk/releases/download/v0.17.1/operator-sdk-v0.17.1-x86_64-linux-gnu -O $SDK_PATH/operator-sdk
+          wget -q https://github.com/operator-framework/operator-sdk/releases/download/v0.17.1/operator-sdk-v0.17.1-x86_64-linux-gnu -O $SDK_PATH/operator-sdk
           chmod +x $SDK_PATH/operator-sdk
           docker login -u=tmaxcloudck -p=${{ secrets.DOCKER_HUB_PASSWORD }}
           make build image push push-latest VERSION=${GITHUB_REF#refs/tags/}
