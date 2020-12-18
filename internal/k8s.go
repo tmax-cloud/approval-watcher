@@ -29,7 +29,7 @@ func GetApproval(c client.Client, name types.NamespacedName) (*tmaxv1.Approval, 
 
 func CreateApproval(c client.Client, name types.NamespacedName, pod *corev1.Pod, userList []string) error {
 	logf.Log.Info("Creating Approval...")
-	label := GenerateUserLabel(userList)
+	label := map[string]string{}
 	// Add Tekton labels, if exist
 	for k, v := range pod.ObjectMeta.Labels {
 		if strings.HasPrefix(k, TektonLabelPrefix) {
