@@ -12,8 +12,15 @@ spec:
       labels:
         app: approval-proxy-server
     spec:
-      serviceAccount: approval-watcher
+      serviceAccountName: approval-watcher
       containers:
         - name: proxy-server
           image: tmaxcloudck/approval-watcher:latest
           imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: 100m
+              memory: 100Mi
+            limits:
+              cpu: 400m
+              memory: 400Mi
